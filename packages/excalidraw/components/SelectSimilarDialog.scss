@@ -1,0 +1,64 @@
+@import "../css/variables.module.scss";
+
+.excalidraw {
+  .select-similar-dialog {
+    .select-similar-dialog-description {
+      margin-bottom: 1rem;
+    }
+
+    .select-similar-dialog-property-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-bottom: 1.5rem;
+      padding: 0.75rem;
+      border: 1px solid var(--dialog-border-color);
+      border-radius: var(--border-radius-lg);
+    }
+
+    .select-similar-dialog-property-row {
+      padding: 0.5rem;
+      border-radius: var(--border-radius-sm);
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background-color: var(--button-gray-1);
+      }
+
+      &.is-selected {
+        background-color: var(--button-gray-2);
+      }
+    }
+
+    .select-similar-dialog-property-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      width: 100%;
+
+      input[type="checkbox"] {
+        cursor: pointer;
+      }
+    }
+
+    .select-similar-dialog-property-name {
+      font-weight: 500;
+    }
+
+    .select-similar-dialog-property-value {
+      color: var(--text-primary-color);
+      opacity: 0.6;
+      font-size: 0.875rem;
+    }
+
+    .select-similar-dialog-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+  }
+} 

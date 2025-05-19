@@ -1,0 +1,42 @@
+.duplication-control {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  z-index: 100;
+  background: var(--island-bg-color, #fff);
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #1971c2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+
+  &__input {
+    width: 40px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 2px 4px;
+  }
+
+  &__button {
+    width: 24px;
+    height: 24px;
+    padding: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    margin-left: 4px;
+
+    &--accept {
+      background: #10b981;
+      color: white;
+    }
+
+    &--reject {
+      background: #ef4444;
+      color: white;
+    }
+  }
+}
