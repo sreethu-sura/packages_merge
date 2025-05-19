@@ -6,13 +6,41 @@ import React, {
   memo,
   useRef,
 } from "react";
-import type Library from "../data/library";
+
+import {
+  LIBRARY_DISABLED_TYPES,
+  randomId,
+  isShallowEqual,
+} from "@excalidraw/common";
+
+import type {
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+} from "@excalidraw/element/types";
+
+import { trackEvent } from "../analytics";
+import { useUIAppState } from "../context/ui-appState";
 import {
   distributeLibraryItemsOnSquareGrid,
   libraryItemsAtom,
 } from "../data/library";
+import { atom, useAtom } from "../editor-jotai";
 import { t } from "../i18n";
-import { randomId } from "../random";
+
+import { getSelectedElements } from "../scene";
+
+import {
+  useApp,
+  useAppProps,
+  useExcalidrawElements,
+  useExcalidrawSetAppState,
+} from "./App";
+import { LibraryMenuControlButtons } from "./LibraryMenuControlButtons";
+import LibraryMenuItems from "./LibraryMenuItems";
+import Spinner from "./Spinner";
+
+import "./LibraryMenu.scss";
+
 import type {
   LibraryItems,
   LibraryItem,
@@ -20,32 +48,9 @@ import type {
   UIAppState,
   AppClassProperties,
 } from "../types";
-import LibraryMenuItems, { CategoryType } from "./LibraryMenuItems";
-import { trackEvent } from "../analytics";
-import { atom, useAtom } from "../editor-jotai";
-import Spinner from "./Spinner";
-import {
-  useApp,
-  useAppProps,
-  useExcalidrawElements,
-  useExcalidrawSetAppState,
-} from "./App";
-import { getSelectedElements } from "../scene";
-import { useUIAppState } from "../context/ui-appState";
-
-import "./LibraryMenu.scss";
-import { LibraryMenuControlButtons } from "./LibraryMenuControlButtons";
-import type {
-  ExcalidrawElement,
-  NonDeletedExcalidrawElement,
-} from "../element/types";
-import { LIBRARY_DISABLED_TYPES } from "../constants";
-import { isShallowEqual } from "../utils";
+import type Library from "../data/library";
 
 export const isLibraryMenuOpenAtom = atom(false);
-
-// Define the CategoryType here for consistency
-// type CategoryType = "rack" | "non-rack" | "other";
 
 const LibraryMenuWrapper = ({ children }: { children: React.ReactNode }) => {
   return <div className="layer-ui__library">{children}</div>;
@@ -78,12 +83,7 @@ const LibraryMenuContent = memo(
     const [libraryItemsData] = useAtom(libraryItemsAtom);
 
     const _onAddToLibrary = useCallback(
-      (
-        elements: LibraryItem["elements"],
-        category?: CategoryType,
-        customCategory?: string,
-        name?: string,
-      ) => {
+      (elements: LibraryItem["elements"]) => {
         const addToLibrary = async (
           processedElements: LibraryItem["elements"],
           libraryItems: LibraryItems,
@@ -102,12 +102,6 @@ const LibraryMenuContent = memo(
               elements: processedElements,
               id: randomId(),
               created: Date.now(),
-              name: name,
-              metadata: category
-                ? category === "custom"
-                  ? { category, customCategory }
-                  : { category }
-                : undefined,
             },
             ...libraryItems,
           ];

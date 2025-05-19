@@ -1,4 +1,16 @@
-import type React from "react";
+import type {
+  IMAGE_MIME_TYPES,
+  UserIdleState,
+  throttleRAF,
+  MIME_TYPES,
+} from "@excalidraw/common";
+
+import type { SuggestedBinding } from "@excalidraw/element";
+
+import type { LinearElementEditor } from "@excalidraw/element";
+
+import type { MaybeTransformHandleType } from "@excalidraw/element";
+
 import type {
   PointerType,
   ExcalidrawLinearElement,
@@ -22,25 +34,35 @@ import type {
   ExcalidrawIframeLikeElement,
   OrderedExcalidrawElement,
   ExcalidrawNonSelectionElement,
-} from "./element/types";
+} from "@excalidraw/element/types";
+
+import type {
+  Merge,
+  MaybePromise,
+  ValueOf,
+  MakeBrand,
+} from "@excalidraw/common/utility-types";
+
+import type {
+  CaptureUpdateActionType,
+  DurableIncrement,
+  EphemeralIncrement,
+} from "@excalidraw/element";
+
 import type { Action } from "./actions/types";
-import type { LinearElementEditor } from "./element/linearElementEditor";
-import type { SuggestedBinding } from "./element/binding";
-import type { ImportedDataState } from "./data/types";
-import type App from "./components/App";
-import type { throttleRAF } from "./utils";
 import type { Spreadsheet } from "./charts";
-import type { Language } from "./i18n";
 import type { ClipboardData } from "./clipboard";
-import type { isOverScrollBars } from "./scene/scrollbars";
-import type { MaybeTransformHandleType } from "./element/transformHandles";
+import type App from "./components/App";
 import type Library from "./data/library";
 import type { FileSystemHandle } from "./data/filesystem";
-import type { IMAGE_MIME_TYPES, MIME_TYPES } from "./constants";
 import type { ContextMenuItems } from "./components/ContextMenu";
 import type { SnapLine } from "./snapping";
-import type { Merge, MaybePromise, ValueOf, MakeBrand } from "./utility-types";
-import type { StoreActionType } from "./store";
+import type { ImportedDataState } from "./data/types";
+
+import type { Language } from "./i18n";
+import type { isOverScrollBars } from "./scene/scrollbars";
+import type React from "react";
+import type { JSX } from "react";
 
 export type SocketId = string & { _brand: "SocketId" };
 
@@ -89,9 +111,9 @@ export type DataURL = string & { _brand: "DataURL" };
 
 export type BinaryFileData = {
   mimeType:
-  | ValueOf<typeof IMAGE_MIME_TYPES>
-  // future user or unknown file type
-  | typeof MIME_TYPES.binary;
+    | ValueOf<typeof IMAGE_MIME_TYPES>
+    // future user or unknown file type
+    | typeof MIME_TYPES.binary;
   id: FileId;
   dataURL: DataURL;
   /**
@@ -119,6 +141,7 @@ export type BinaryFiles = Record<ExcalidrawElement["id"], BinaryFileData>;
 
 export type ToolType =
   | "selection"
+  | "lasso"
   | "rectangle"
   | "diamond"
   | "ellipse"
@@ -138,13 +161,13 @@ export type ElementOrToolType = ExcalidrawElementType | ToolType | "custom";
 
 export type ActiveTool =
   | {
-    type: ToolType;
-    customType: null;
-  }
+      type: ToolType;
+      customType: null;
+    }
   | {
-    type: "custom";
-    customType: string;
-  };
+      type: "custom";
+      customType: string;
+    };
 
 export type SidebarName = string;
 export type SidebarTabName = string;
@@ -161,7 +184,6 @@ type _CommonCanvasAppState = {
   width: AppState["width"];
   height: AppState["height"];
   viewModeEnabled: AppState["viewModeEnabled"];
-  insertModeEnabled: AppState["insertModeEnabled"];
   openDialog: AppState["openDialog"];
   editingGroupId: AppState["editingGroupId"]; // TODO: move to interactive canvas if possible
   selectedElementIds: AppState["selectedElementIds"]; // TODO: move to interactive canvas if possible
@@ -292,6 +314,8 @@ export interface AppState {
      */
     lastActiveTool: ActiveTool | null;
     locked: boolean;
+    // indicates if the current tool is temporarily switched on from the selection tool
+    fromSelection: boolean;
   } & ActiveTool;
   penMode: boolean;
   penDetected: boolean;
@@ -325,18 +349,18 @@ export interface AppState {
   zoom: Zoom;
   openMenu: "canvas" | "shape" | null;
   openPopup:
-  | "canvasBackground"
-  | "elementBackground"
-  | "elementStroke"
-  | "fontFamily"
-  | null;
+    | "canvasBackground"
+    | "elementBackground"
+    | "elementStroke"
+    | "fontFamily"
+    | null;
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
-  | null
-  | { name: "imageExport" | "help" | "jsonExport" | "frameSelectorForPdf" | "settings" | "csvExport" | "replaceWithLibraryItem" | "selectSimilar" | "visibilitySettings" }
-  | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
-  | { name: "commandPalette" }
-  | { name: "elementLinkSelector"; sourceElementId: ExcalidrawElement["id"] };
+    | null
+    | { name: "imageExport" | "help" | "jsonExport" }
+    | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
+    | { name: "commandPalette" }
+    | { name: "elementLinkSelector"; sourceElementId: ExcalidrawElement["id"] };
 
   /**
    * Reflects user preference for whether the default sidebar should be docked.
@@ -360,13 +384,7 @@ export interface AppState {
   gridSize: number;
   gridStep: number;
   gridModeEnabled: boolean;
-  /** Scale for coordinate display (px to ft). Default 62.5 means 1px = 0.016ft or 125px = 2ft */
-  coordinateScale: number;
   viewModeEnabled: boolean;
-  insertModeEnabled: boolean;
-  
-  /** Frame that is currently being exported */
-  exportingFrame?: ExcalidrawFrameLikeElement | null;
 
   /** top-most selected groups (i.e. does not include nested groups) */
   selectedGroupIds: { [groupId: string]: boolean };
@@ -387,14 +405,14 @@ export interface AppState {
   };
   currentChartType: ChartType;
   pasteDialog:
-  | {
-    shown: false;
-    data: null;
-  }
-  | {
-    shown: true;
-    data: Spreadsheet;
-  };
+    | {
+        shown: false;
+        data: null;
+      }
+    | {
+        shown: true;
+        data: Spreadsheet;
+      };
   /** imageElement waiting to be placed on canvas */
   pendingImageElementId: ExcalidrawImageElement["id"] | null;
   showHyperlinkPopup: false | "info" | "editor";
@@ -414,33 +432,14 @@ export interface AppState {
   isCropping: boolean;
   croppingElementId: ExcalidrawElement["id"] | null;
 
-  searchMatches: readonly SearchMatch[];
-
-  /**
-   * Parameter name used for grouping elements during row and rack numbering.
-   * When set to a custom data parameter name, elements sharing the same value
-   * for that parameter will be numbered independently.
-   */
-  numberingGroupParameter: string;
-  
-  /**
-   * Direction for rack numbering: "top-down" or "down-top".
-   */
-  rackNumberingDirection: string;
-  
-  /**
-   * Direction for row numbering: "left-right" or "right-left".
-   */
-  rowNumberingDirection: string;
-  
-  /**
-   * Frame-specific direction settings for numbering.
-   * Maps frame IDs to their custom direction settings.
-   */
-  frameDirectionSettings: Record<string, { row: string; rack: string }>;
+  /** null if no search matches found / search closed */
+  searchMatches: Readonly<{
+    focusedId: ExcalidrawElement["id"] | null;
+    matches: readonly SearchMatch[];
+  }> | null;
 }
 
-type SearchMatch = {
+export type SearchMatch = {
   id: string;
   focus: boolean;
   matchedLines: {
@@ -448,6 +447,7 @@ type SearchMatch = {
     offsetY: number;
     width: number;
     height: number;
+    showOnCanvas: boolean;
   }[];
 };
 
@@ -499,19 +499,14 @@ export type LibraryItem = {
   created: number;
   name?: string;
   error?: string;
-  metadata?: {
-    category?: "rack" | "non-rack" | "custom" | "other";
-    customCategory?: string;
-    [key: string]: any;
-  };
 };
 export type LibraryItems = readonly LibraryItem[];
 export type LibraryItems_anyVersion = LibraryItems | LibraryItems_v1;
 
 export type LibraryItemsSource =
   | ((
-    currentLibraryItems: LibraryItems,
-  ) => MaybePromise<LibraryItems_anyVersion | Blob>)
+      currentLibraryItems: LibraryItems,
+    ) => MaybePromise<LibraryItems_anyVersion | Blob>)
   | MaybePromise<LibraryItems_anyVersion | Blob>;
 // -----------------------------------------------------------------------------
 
@@ -533,9 +528,10 @@ export interface ExcalidrawProps {
     appState: AppState,
     files: BinaryFiles,
   ) => void;
+  onIncrement?: (event: DurableIncrement | EphemeralIncrement) => void;
   initialData?:
-  | (() => MaybePromise<ExcalidrawInitialDataState | null>)
-  | MaybePromise<ExcalidrawInitialDataState | null>;
+    | (() => MaybePromise<ExcalidrawInitialDataState | null>)
+    | MaybePromise<ExcalidrawInitialDataState | null>;
   excalidrawAPI?: (api: ExcalidrawImperativeAPI) => void;
   isCollaborating?: boolean;
   onPointerUpdate?: (payload: {
@@ -605,36 +601,34 @@ export interface ExcalidrawProps {
   onUserFollow?: (payload: OnUserFollowedPayload) => void;
   children?: React.ReactNode;
   validateEmbeddable?:
-  | boolean
-  | string[]
-  | RegExp
-  | RegExp[]
-  | ((link: string) => boolean | undefined);
+    | boolean
+    | string[]
+    | RegExp
+    | RegExp[]
+    | ((link: string) => boolean | undefined);
   renderEmbeddable?: (
     element: NonDeleted<ExcalidrawEmbeddableElement>,
     appState: AppState,
   ) => JSX.Element | null;
   aiEnabled?: boolean;
   showDeprecatedFonts?: boolean;
+  renderScrollbars?: boolean;
 }
 
 export type SceneData = {
   elements?: ImportedDataState["elements"];
   appState?: ImportedDataState["appState"];
   collaborators?: Map<SocketId, Collaborator>;
-  storeAction?: StoreActionType;
+  captureUpdate?: CaptureUpdateActionType;
 };
-
-export enum UserIdleState {
-  ACTIVE = "active",
-  AWAY = "away",
-  IDLE = "idle",
-}
 
 export type ExportOpts = {
   saveFileToDisk?: boolean;
-  // Shareable link feature has been removed
-  onExportToBackend?: null;
+  onExportToBackend?: (
+    exportedElements: readonly NonDeletedExcalidrawElement[],
+    appState: UIAppState,
+    files: BinaryFiles,
+  ) => void;
   renderCustomUI?: (
     exportedElements: readonly NonDeletedExcalidrawElement[],
     appState: UIAppState,
@@ -689,14 +683,6 @@ export type AppProps = Merge<
 export type AppClassProperties = {
   props: AppProps;
   state: AppState;
-  setState: <K extends keyof AppState>(
-    state: 
-      | AppState 
-      | ((prevState: Readonly<AppState>, props: Readonly<AppProps>) => AppState | Pick<AppState, K> | null) 
-      | Pick<AppState, K> 
-      | null, 
-    callback?: (() => void) | undefined
-  ) => void;
   interactiveCanvas: HTMLCanvasElement | null;
   /** static canvas */
   canvas: HTMLCanvasElement;
@@ -739,9 +725,10 @@ export type AppClassProperties = {
   excalidrawContainerValue: App["excalidrawContainerValue"];
 
   onPointerUpEmitter: App["onPointerUpEmitter"];
+  updateEditorAtom: App["updateEditorAtom"];
 };
 
-export interface PointerDownState {
+export type PointerDownState = Readonly<{
   // The first position at which pointerDown happened
   origin: Readonly<{ x: number; y: number }>;
   // Same as "origin" but snapped to the grid, if grid is on
@@ -750,15 +737,9 @@ export interface PointerDownState {
   scrollbars: ReturnType<typeof isOverScrollBars>;
   // The previous pointer position
   lastCoords: { x: number; y: number };
-  // map of original elements data
+  // original element frozen snapshots so we can access the original
+  // element attribute values at time of pointerdown
   originalElements: Map<string, NonDeleted<ExcalidrawElement>>;
-  // Used to track shifted positions of elements in insert mode to prevent jittering
-  lastShiftedPositions?: Map<string, number>;
-  // Store state for insert mode to make element positioning smoother
-  insertModeMetadata?: {
-    rightElementsShifted: boolean;
-    rightShiftAmount: number;
-  };
   resize: {
     // Handle when resizing, might change during the pointer interaction
     handleType: MaybeTransformHandleType;
@@ -791,6 +772,9 @@ export interface PointerDownState {
     hasOccurred: boolean;
     // Might change during the pointer interaction
     offset: { x: number; y: number } | null;
+    // by default same as PointerDownState.origin. On alt-duplication, reset
+    // to current pointer position at time of duplication.
+    origin: { x: number; y: number };
   };
   // We need to have these in the state so that we can unsubscribe them
   eventListeners: {
@@ -806,13 +790,13 @@ export interface PointerDownState {
   boxSelection: {
     hasOccurred: boolean;
   };
-  rightElementsOriginalPositions?: Map<NonDeletedExcalidrawElement, { x: number }>;
-}
+}>;
 
 export type UnsubscribeCallback = () => void;
 
 export interface ExcalidrawImperativeAPI {
   updateScene: InstanceType<typeof App>["updateScene"];
+  mutateElement: InstanceType<typeof App>["mutateElement"];
   updateLibrary: InstanceType<typeof Library>["updateLibrary"];
   resetScene: InstanceType<typeof App>["resetScene"];
   getSceneElementsIncludingDeleted: InstanceType<
@@ -848,6 +832,9 @@ export interface ExcalidrawImperativeAPI {
       files: BinaryFiles,
     ) => void,
   ) => UnsubscribeCallback;
+  onIncrement: (
+    callback: (event: DurableIncrement | EphemeralIncrement) => void,
+  ) => UnsubscribeCallback;
   onPointerDown: (
     callback: (
       activeTool: AppState["activeTool"],
@@ -865,7 +852,7 @@ export interface ExcalidrawImperativeAPI {
   onScrollChange: (
     callback: (scrollX: number, scrollY: number, zoom: Zoom) => void,
   ) => UnsubscribeCallback;
-  onUserFollow?: (
+  onUserFollow: (
     callback: (payload: OnUserFollowedPayload) => void,
   ) => UnsubscribeCallback;
 }

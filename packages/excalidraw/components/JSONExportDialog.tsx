@@ -1,19 +1,25 @@
 import React from "react";
-import type { NonDeletedExcalidrawElement } from "../element/types";
+
+import { getFrame } from "@excalidraw/common";
+
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
+import { actionSaveFileToDisk } from "../actions/actionExport";
+
+import { trackEvent } from "../analytics";
+import { nativeFileSystemSupported } from "../data/filesystem";
 import { t } from "../i18n";
 
-import type { ExportOpts, BinaryFiles, UIAppState } from "../types";
-import { Dialog } from "./Dialog";
-import { exportToFileIcon } from "./icons";
-import { ToolButton } from "./ToolButton";
-import { actionSaveFileToDisk } from "../actions/actionExport";
 import { Card } from "./Card";
+import { Dialog } from "./Dialog";
+import { ToolButton } from "./ToolButton";
+import { exportToFileIcon, LinkIcon } from "./icons";
 
 import "./ExportDialog.scss";
-import { nativeFileSystemSupported } from "../data/filesystem";
-import { trackEvent } from "../analytics";
+
 import type { ActionManager } from "../actions/manager";
-import { getFrame } from "../utils";
+
+import type { ExportOpts, BinaryFiles, UIAppState } from "../types";
 
 export type ExportCB = (
   elements: readonly NonDeletedExcalidrawElement[],
@@ -40,16 +46,6 @@ const JSONExportModal = ({
   canvas: HTMLCanvasElement;
 }) => {
   const { onExportToBackend } = exportOpts;
-  // If only saveFileToDisk is available and no custom UI, execute the action directly
-  if (exportOpts.saveFileToDisk && !exportOpts.renderCustomUI) {
-    // Execute the action directly and close the dialog
-    setTimeout(() => {
-      actionManager.executeAction(actionSaveFileToDisk, "ui");
-      onCloseRequest();
-    }, 0);
-    return null;
-  }
-
   return (
     <div className="ExportDialog ExportDialog--json">
       <div className="ExportDialog-cards">
@@ -70,7 +66,29 @@ const JSONExportModal = ({
               showAriaLabel={true}
               onClick={() => {
                 actionManager.executeAction(actionSaveFileToDisk, "ui");
-                onCloseRequest();
+              }}
+            />
+          </Card>
+        )}
+        {onExportToBackend && (
+          <Card color="pink">
+            <div className="Card-icon">{LinkIcon}</div>
+            <h2>{t("exportDialog.link_title")}</h2>
+            <div className="Card-details">{t("exportDialog.link_details")}</div>
+            <ToolButton
+              className="Card-button"
+              type="button"
+              title={t("exportDialog.link_button")}
+              aria-label={t("exportDialog.link_button")}
+              showAriaLabel={true}
+              onClick={async () => {
+                try {
+                  trackEvent("export", "link", `ui (${getFrame()})`);
+                  await onExportToBackend(elements, appState, files);
+                  onCloseRequest();
+                } catch (error: any) {
+                  setAppState({ errorMessage: error.message });
+                }
               }}
             />
           </Card>

@@ -1,38 +1,44 @@
+import { round } from "@excalidraw/math";
+import clsx from "clsx";
+import throttle from "lodash.throttle";
 import { useEffect, useMemo, useState, memo } from "react";
-import { getCommonBounds } from "../../element/bounds";
-import type { NonDeletedExcalidrawElement } from "../../element/types";
+
+import { STATS_PANELS } from "@excalidraw/common";
+import { getCommonBounds } from "@excalidraw/element";
+import { getUncroppedWidthAndHeight } from "@excalidraw/element";
+import { isElbowArrow, isImageElement } from "@excalidraw/element";
+
+import { frameAndChildrenSelectedTogether } from "@excalidraw/element";
+
+import { elementsAreInSameGroup } from "@excalidraw/element";
+
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
 import { t } from "../../i18n";
+import { isGridModeEnabled } from "../../snapping";
+import { useExcalidrawAppState, useExcalidrawSetAppState } from "../App";
+import { Island } from "../Island";
+import { CloseIcon } from "../icons";
+
+import Angle from "./Angle";
+import CanvasGrid from "./CanvasGrid";
+import Collapsible from "./Collapsible";
+import Dimension from "./Dimension";
+import FontSize from "./FontSize";
+import MultiAngle from "./MultiAngle";
+import MultiDimension from "./MultiDimension";
+import MultiFontSize from "./MultiFontSize";
+import MultiPosition from "./MultiPosition";
+import Position from "./Position";
+import { getAtomicUnits } from "./utils";
+
+import "./Stats.scss";
+
 import type {
   AppClassProperties,
   AppState,
   ExcalidrawProps,
 } from "../../types";
-import { CloseIcon } from "../icons";
-import { Island } from "../Island";
-import { throttle } from "lodash";
-import Dimension from "./Dimension";
-import Angle from "./Angle";
-import FontSize from "./FontSize";
-import MultiDimension from "./MultiDimension";
-import { elementsAreInSameGroup } from "../../groups";
-import MultiAngle from "./MultiAngle";
-import MultiFontSize from "./MultiFontSize";
-import Position from "./Position";
-import MultiPosition from "./MultiPosition";
-import Collapsible from "./Collapsible";
-import { useExcalidrawAppState, useExcalidrawSetAppState } from "../App";
-import { getAtomicUnits } from "./utils";
-import { STATS_PANELS } from "../../constants";
-import { isElbowArrow, isImageElement } from "../../element/typeChecks";
-import CanvasGrid from "./CanvasGrid";
-import clsx from "clsx";
-import CustomProperties from "./CustomProperties";
-
-import "./Stats.scss";
-import { isGridModeEnabled } from "../../snapping";
-import { getUncroppedWidthAndHeight } from "../../element/cropElement";
-import { round } from "../../../math";
-import { frameAndChildrenSelectedTogether } from "../../frame";
 
 interface StatsProps {
   app: AppClassProperties;
@@ -186,16 +192,64 @@ export const StatsInner = memo(
             </div>
           </div>
 
+          <Collapsible
+            label={<h3>{t("stats.generalStats")}</h3>}
+            open={!!(appState.stats.panels & STATS_PANELS.generalStats)}
+            openTrigger={() =>
+              setAppState((state) => {
+                return {
+                  stats: {
+                    open: true,
+                    panels: state.stats.panels ^ STATS_PANELS.generalStats,
+                  },
+                };
+              })
+            }
+          >
+            <StatsRows>
+              <StatsRow heading>{t("stats.scene")}</StatsRow>
+              <StatsRow columns={2}>
+                <div>{t("stats.shapes")}</div>
+                <div>{elements.length}</div>
+              </StatsRow>
+              <StatsRow columns={2}>
+                <div>{t("stats.width")}</div>
+                <div>{sceneDimension.width}</div>
+              </StatsRow>
+              <StatsRow columns={2}>
+                <div>{t("stats.height")}</div>
+                <div>{sceneDimension.height}</div>
+              </StatsRow>
+              {gridModeEnabled && (
+                <>
+                  <StatsRow heading>Canvas</StatsRow>
+                  <StatsRow>
+                    <CanvasGrid
+                      property="gridStep"
+                      scene={scene}
+                      appState={appState}
+                      setAppState={setAppState}
+                    />
+                  </StatsRow>
+                </>
+              )}
+            </StatsRows>
+
+            {renderCustomStats?.(elements, appState)}
+          </Collapsible>
+
           {!_frameAndChildrenSelectedTogether && selectedElements.length > 0 && (
             <div
               id="elementStats"
               style={{
-                marginTop: 0,
+                marginTop: 12,
               }}
             >
               <Collapsible
                 label={<h3>{t("stats.elementProperties")}</h3>}
-                open={true}
+                open={
+                  !!(appState.stats.panels & STATS_PANELS.elementProperties)
+                }
                 openTrigger={() =>
                   setAppState((state) => {
                     return {
@@ -235,7 +289,11 @@ export const StatsInner = memo(
                           </StatsRow>
                         )}
 
-                      <StatsRow heading data-testid="stats-element-type">
+                      <StatsRow
+                        heading
+                        data-testid="stats-element-type"
+                        style={{ margin: "0.3125rem 0" }}
+                      >
                         {appState.croppingElementId
                           ? t("labels.imageCropping")
                           : t(`element.${singleElement.type}`)}
@@ -259,7 +317,6 @@ export const StatsInner = memo(
                           appState={appState}
                         />
                       </StatsRow>
-
                       <StatsRow>
                         <Dimension
                           property="width"
@@ -276,14 +333,6 @@ export const StatsInner = memo(
                           appState={appState}
                         />
                       </StatsRow>
-                      {/* <StatsRow>
-                      <CustomData
-    property="customData"
-    element={singleElement}
-    scene={scene}
-    appState={appState}
-  />
-</StatsRow> */}
                       {!isElbowArrow(singleElement) && (
                         <StatsRow>
                           <Angle
@@ -297,17 +346,6 @@ export const StatsInner = memo(
                       <StatsRow>
                         <FontSize
                           property="fontSize"
-                          element={singleElement}
-                          scene={scene}
-                          appState={appState}
-                        />
-                      </StatsRow>
-
-                      <StatsRow heading>
-                        {t("labels.customProperties")}
-                      </StatsRow>
-                      <StatsRow>
-                        <CustomProperties
                           element={singleElement}
                           scene={scene}
                           appState={appState}
@@ -375,7 +413,6 @@ export const StatsInner = memo(
                           appState={appState}
                         />
                       </StatsRow>
-
                       <StatsRow>
                         <MultiFontSize
                           property="fontSize"
@@ -383,17 +420,6 @@ export const StatsInner = memo(
                           scene={scene}
                           appState={appState}
                           elementsMap={elementsMap}
-                        />
-                      </StatsRow>
-
-                      <StatsRow heading>
-                        {t("labels.customProperties")}
-                      </StatsRow>
-                      <StatsRow>
-                        <CustomProperties
-                          element={multipleElements[0]}
-                          scene={scene}
-                          appState={appState}
                         />
                       </StatsRow>
                     </>

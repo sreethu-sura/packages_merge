@@ -1,11 +1,17 @@
+import { KEYS, arrayToMap } from "@excalidraw/common";
+
+import { newElementWith } from "@excalidraw/element";
+
+import { isFrameLikeElement } from "@excalidraw/element";
+
+import { CaptureUpdateAction } from "@excalidraw/element";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { LockedIcon, UnlockedIcon } from "../components/icons";
-import { newElementWith } from "../element/mutateElement";
-import { isFrameLikeElement } from "../element/typeChecks";
-import type { ExcalidrawElement } from "../element/types";
-import { KEYS } from "../keys";
+
 import { getSelectedElements } from "../scene";
-import { StoreAction } from "../store";
-import { arrayToMap } from "../utils";
+
 import { register } from "./register";
 
 const shouldLock = (elements: readonly ExcalidrawElement[]) =>
@@ -41,44 +47,34 @@ export const actionToggleElementLock = register({
     );
   },
   perform: (elements, appState, _, app) => {
-    try {
-      const selectedElements = app.scene.getSelectedElements({
-        selectedElementIds: appState.selectedElementIds,
-        includeBoundTextElement: true,
-        includeElementsInFrames: true,
-      });
+    const selectedElements = app.scene.getSelectedElements({
+      selectedElementIds: appState.selectedElementIds,
+      includeBoundTextElement: true,
+      includeElementsInFrames: true,
+    });
 
-      if (!selectedElements.length) {
-        return false;
-      }
-
-      const nextLockState = shouldLock(selectedElements);
-      const selectedElementsMap = arrayToMap(selectedElements);
-      return {
-        elements: elements.map((element) => {
-          try {
-            if (!selectedElementsMap.has(element.id)) {
-              return element;
-            }
-
-            return newElementWith(element, { locked: nextLockState });
-          } catch (err) {
-            console.error("Error toggling element lock state:", element.id, err);
-            return element;
-          }
-        }),
-        appState: {
-          ...appState,
-          selectedLinearElement: nextLockState
-            ? null
-            : appState.selectedLinearElement,
-        },
-        storeAction: StoreAction.CAPTURE,
-      };
-    } catch (err) {
-      console.error("Error in actionToggleElementLock:", err);
-      return { elements, appState, storeAction: StoreAction.NONE };
+    if (!selectedElements.length) {
+      return false;
     }
+
+    const nextLockState = shouldLock(selectedElements);
+    const selectedElementsMap = arrayToMap(selectedElements);
+    return {
+      elements: elements.map((element) => {
+        if (!selectedElementsMap.has(element.id)) {
+          return element;
+        }
+
+        return newElementWith(element, { locked: nextLockState });
+      }),
+      appState: {
+        ...appState,
+        selectedLinearElement: nextLockState
+          ? null
+          : appState.selectedLinearElement,
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
   keyTest: (event, appState, elements, app) => {
     return (
@@ -95,7 +91,6 @@ export const actionToggleElementLock = register({
 
 export const actionUnlockAllElements = register({
   name: "unlockAllElements",
-  paletteName: "Unlock all elements",
   trackEvent: { category: "canvas" },
   viewMode: false,
   icon: UnlockedIcon,
@@ -107,33 +102,23 @@ export const actionUnlockAllElements = register({
     );
   },
   perform: (elements, appState) => {
-    try {
-      const lockedElements = elements.filter((el) => el.locked);
+    const lockedElements = elements.filter((el) => el.locked);
 
-      return {
-        elements: elements.map((element) => {
-          try {
-            if (element.locked) {
-              return newElementWith(element, { locked: false });
-            }
-            return element;
-          } catch (err) {
-            console.error("Error unlocking element:", element.id, err);
-            return element;
-          }
-        }),
-        appState: {
-          ...appState,
-          selectedElementIds: Object.fromEntries(
-            lockedElements.map((el) => [el.id, true]),
-          ),
-        },
-        storeAction: StoreAction.CAPTURE,
-      };
-    } catch (err) {
-      console.error("Error in actionUnlockAllElements:", err);
-      return { elements, appState, storeAction: StoreAction.NONE };
-    }
+    return {
+      elements: elements.map((element) => {
+        if (element.locked) {
+          return newElementWith(element, { locked: false });
+        }
+        return element;
+      }),
+      appState: {
+        ...appState,
+        selectedElementIds: Object.fromEntries(
+          lockedElements.map((el) => [el.id, true]),
+        ),
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
   label: "labels.elementLock.unlockAll",
 });

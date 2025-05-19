@@ -1,7 +1,9 @@
-import { isDarwin } from "../constants";
+import { isDarwin, getShortcutKey } from "@excalidraw/common";
+
+import type { SubtypeOf } from "@excalidraw/common/utility-types";
+
 import { t } from "../i18n";
-import type { SubtypeOf } from "../utility-types";
-import { getShortcutKey } from "../utils";
+
 import type { ActionName } from "./types";
 
 export type ShortcutName =
@@ -48,10 +50,6 @@ export type ShortcutName =
       | "saveToActiveFile"
       | "toggleShortcuts"
       | "wrapSelectionInFrame"
-      | "numberRackElements"
-      | "numberRowElements"
-      | "numberRowAndRackElements"
-      | "toggleMode"
     >
   | "saveScene"
   | "imageExport"
@@ -99,7 +97,6 @@ const shortcutMap: Record<ShortcutName, string[]> = {
   objectsSnapMode: [getShortcutKey("Alt+S")],
   stats: [getShortcutKey("Alt+/")],
   addToLibrary: [],
-  toggleMode: [getShortcutKey("Alt+I")],
   flipHorizontal: [getShortcutKey("Shift+H")],
   flipVertical: [getShortcutKey("Shift+V")],
   viewMode: [getShortcutKey("Alt+R")],
@@ -119,9 +116,6 @@ const shortcutMap: Record<ShortcutName, string[]> = {
   toggleShortcuts: [getShortcutKey("?")],
   searchMenu: [getShortcutKey("CtrlOrCmd+F")],
   wrapSelectionInFrame: [],
-  numberRackElements: [getShortcutKey("N")],
-  numberRowElements: [getShortcutKey("R")],
-  numberRowAndRackElements: [getShortcutKey("B")],
 };
 
 export const getShortcutFromShortcutName = (name: ShortcutName, idx = 0) => {

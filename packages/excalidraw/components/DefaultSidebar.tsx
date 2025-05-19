@@ -1,21 +1,27 @@
 import clsx from "clsx";
+
 import {
   CANVAS_SEARCH_TAB,
   DEFAULT_SIDEBAR,
   LIBRARY_SIDEBAR_TAB,
-} from "../constants";
+  composeEventHandlers,
+} from "@excalidraw/common";
+
+import type { MarkOptional, Merge } from "@excalidraw/common/utility-types";
+
 import { useTunnels } from "../context/tunnels";
 import { useUIAppState } from "../context/ui-appState";
-import type { MarkOptional, Merge } from "../utility-types";
-import { composeEventHandlers } from "../utils";
-import { useExcalidrawSetAppState } from "./App";
-import { withInternalFallback } from "./hoc/withInternalFallback";
-import { LibraryMenu } from "./LibraryMenu";
-import type { SidebarProps, SidebarTriggerProps } from "./Sidebar/common";
-import { Sidebar } from "./Sidebar/Sidebar";
+
 import "../components/dropdownMenu/DropdownMenu.scss";
+
+import { useExcalidrawSetAppState } from "./App";
+import { LibraryMenu } from "./LibraryMenu";
 import { SearchMenu } from "./SearchMenu";
+import { Sidebar } from "./Sidebar/Sidebar";
+import { withInternalFallback } from "./hoc/withInternalFallback";
 import { LibraryIcon, searchIcon } from "./icons";
+
+import type { SidebarProps, SidebarTriggerProps } from "./Sidebar/common";
 
 const DefaultSidebarTrigger = withInternalFallback(
   "DefaultSidebarTrigger",
@@ -68,17 +74,21 @@ export const DefaultSidebar = Object.assign(
 
       const { DefaultSidebarTabTriggersTunnel } = useTunnels();
 
+      const isForceDocked = appState.openSidebar?.tab === CANVAS_SEARCH_TAB;
+
       return (
         <Sidebar
           {...rest}
           name="default"
           key="default"
           className={clsx("default-sidebar", className)}
-          docked={docked ?? appState.defaultSidebarDockedPreference}
+          docked={
+            isForceDocked || (docked ?? appState.defaultSidebarDockedPreference)
+          }
           onDock={
             // `onDock=false` disables docking.
             // if `docked` passed, but no onDock passed, disable manual docking.
-            onDock === false || (!onDock && docked != null)
+            isForceDocked || onDock === false || (!onDock && docked != null)
               ? undefined
               : // compose to allow the host app to listen on default behavior
                 composeEventHandlers(onDock, (docked) => {

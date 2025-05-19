@@ -1,35 +1,14 @@
 @import "../css/variables.module.scss";
 
 .excalidraw {
-  .library-unit-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0;
-    width: 100%;
-  }
-  
-  .library-unit__name {
-    font-size: 11px;
-    margin-top: 5px;
-    text-align: center;
-    max-width: 90%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text-primary-color);
-  }
-
   .library-unit {
     align-items: center;
     border: 1px solid transparent;
     display: flex;
     justify-content: center;
     position: relative;
-    width: 65px;
-    height: 65px;
-    margin: 0 auto;
+    width: 55px;
+    height: 55px;
     box-sizing: border-box;
     border-radius: var(--border-radius-lg);
 
@@ -174,38 +153,6 @@
 
   .library-unit__active {
     cursor: pointer;
-  }
-
-  .library-unit__edit-button {
-    position: absolute;
-    bottom: 0.125rem;
-    right: 0.125rem;
-    margin: 0;
-    padding: 0.15rem;
-    background-color: var(--color-primary-light);
-    border: 1px solid var(--color-primary);
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-
-    svg {
-      width: 10px;
-      height: 10px;
-      color: var(--color-primary);
-    }
-
-    &:hover {
-      background-color: var(--color-primary);
-
-      svg {
-        color: var(--color-primary-light);
-      }
-    }
-  }
-
-  .library-unit:hover .library-unit__edit-button,
-  .library-unit--selected .library-unit__edit-button {
-    opacity: 1;
   }
 
   @keyframes library-unit__adder-animation {

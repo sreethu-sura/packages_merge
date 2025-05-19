@@ -1,18 +1,70 @@
 import clsx from "clsx";
-import React, { useEffect } from "react";
-import ReactDOM from "react-dom";
-import type { ActionManager } from "../actions/manager";
+import React from "react";
+
 import {
   CLASSES,
   DEFAULT_SIDEBAR,
-  LIBRARY_SIDEBAR_WIDTH,
   TOOL_TYPE,
-} from "../constants";
-import { showSelectedShapeActions } from "../element";
-import type { NonDeletedExcalidrawElement } from "../element/types";
-import { Language } from "../i18n";
+  arrayToMap,
+  capitalizeString,
+  isShallowEqual,
+} from "@excalidraw/common";
+
+import { mutateElement } from "@excalidraw/element";
+
+import { showSelectedShapeActions } from "@excalidraw/element";
+
+import { ShapeCache } from "@excalidraw/element";
+
+import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
+
+import { actionToggleStats } from "../actions";
+import { trackEvent } from "../analytics";
+import { isHandToolActive } from "../appState";
+import { TunnelsContext, useInitializeTunnels } from "../context/tunnels";
+import { UIAppStateContext } from "../context/ui-appState";
+import { useAtom, useAtomValue } from "../editor-jotai";
+
 import { t } from "../i18n";
 import { calculateScrollCenter } from "../scene";
+
+import { SelectedShapeActions, ShapesSwitcher } from "./Actions";
+import { LoadingMessage } from "./LoadingMessage";
+import { LockButton } from "./LockButton";
+import { MobileMenu } from "./MobileMenu";
+import { PasteChartDialog } from "./PasteChartDialog";
+import { Section } from "./Section";
+import Stack from "./Stack";
+import { UserList } from "./UserList";
+import { PenModeButton } from "./PenModeButton";
+import Footer from "./footer/Footer";
+import { isSidebarDockedAtom } from "./Sidebar/Sidebar";
+import MainMenu from "./main-menu/MainMenu";
+import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
+import { useDevice } from "./App";
+import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
+import { LibraryIcon } from "./icons";
+import { DefaultSidebar } from "./DefaultSidebar";
+import { TTDDialog } from "./TTDDialog/TTDDialog";
+import { Stats } from "./Stats";
+import ElementLinkDialog from "./ElementLinkDialog";
+import { ErrorDialog } from "./ErrorDialog";
+import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
+import { FixedSideContainer } from "./FixedSideContainer";
+import { HandButton } from "./HandButton";
+import { HelpDialog } from "./HelpDialog";
+import { HintViewer } from "./HintViewer";
+import { ImageExportDialog } from "./ImageExportDialog";
+import { Island } from "./Island";
+import { JSONExportDialog } from "./JSONExportDialog";
+import { LaserPointerButton } from "./LaserPointerButton";
+
+import "./LayerUI.scss";
+import "./Toolbar.scss";
+
+import type { ActionManager } from "../actions/manager";
+
+import type { Language } from "../i18n";
 import type {
   AppProps,
   AppState,
@@ -21,129 +73,6 @@ import type {
   UIAppState,
   AppClassProperties,
 } from "../types";
-import { capitalizeString, isShallowEqual } from "../utils";
-import { SelectedShapeActions, ShapesSwitcher } from "./Actions";
-import { ErrorDialog } from "./ErrorDialog";
-import { ImageExportDialog } from "./ImageExportDialog";
-import { FixedSideContainer } from "./FixedSideContainer";
-import { HintViewer } from "./HintViewer";
-import { Island } from "./Island";
-import { LoadingMessage } from "./LoadingMessage";
-import { LockButton } from "./LockButton";
-import { PasteChartDialog } from "./PasteChartDialog";
-import { Section } from "./Section";
-import { HelpDialog } from "./HelpDialog";
-import Stack from "./Stack";
-import { UserList } from "./UserList";
-import { JSONExportDialog } from "./JSONExportDialog";
-import { PenModeButton } from "./PenModeButton";
-import { trackEvent } from "../analytics";
-import { useDevice } from "./App";
-import Footer from "./footer/Footer";
-import { isSidebarDockedAtom } from "./Sidebar/Sidebar";
-import { useAtom, useAtomValue } from "../editor-jotai";
-import MainMenu from "./main-menu/MainMenu";
-import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
-import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
-import { HandButton } from "./HandButton";
-import { isHandToolActive } from "../appState";
-import { TunnelsContext, useInitializeTunnels } from "../context/tunnels";
-import { LibraryIcon } from "./icons";
-import { DefaultSidebar } from "./DefaultSidebar";
-import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
-import { mutateElement } from "../element/mutateElement";
-import { ShapeCache } from "../scene/ShapeCache";
-import Scene from "../scene/Scene";
-import { LaserPointerButton } from "./LaserPointerButton";
-import { TTDDialog } from "./TTDDialog/TTDDialog";
-import { Stats } from "./Stats";
-import { actionToggleStats } from "../actions/actionToggleStats";
-import {
-  actionToggleGridMode,
-  actionToggleTheme,
-  actionToggleZenMode,
-} from "../actions";
-import { actionToggleViewMode } from "../actions/actionToggleViewMode";
-import { Tooltip } from "./Tooltip";
-import ElementLinkDialog from "./ElementLinkDialog";
-import { UIAppStateContext } from "../context/ui-appState";
-import { FrameSelector } from "./FrameSelector";
-import { prepareElementsForExport } from "../data";
-import { exportToPdf } from "../data/exportToPdf";
-import { fileSave, nativeFileSystemSupported } from "../data/filesystem";
-import type { ExcalidrawFrameLikeElement } from "../element/types";
-import { SettingsDialog } from "./SettingsDialog";
-import "./LayerUI.scss";
-import "./Toolbar.scss";
-import { DEFAULT_FONT_FAMILY } from "../constants";
-import { FONT_FAMILY } from "../constants";
-import { CSVExportDialog } from "./CSVExportDialog";
-import { actionExportToCsv } from "../actions/actionExport";
-import { getNonDeletedElements } from "../element";
-import { ReplaceWithLibraryItemDialog } from "./ReplaceWithLibraryItemDialog";
-import { SelectSimilarDialog } from "./SelectSimilarDialog";
-import { VisibilitySettingsDialog } from "./VisibilitySettingsDialog";
-
-const viewToggleButtonStyles = `
-.view-toggle-button {
-  margin-right: 8px;
-}
-
-.view-toggle-button__button {
-  display: flex;
-  align-items: center;
-  background: var(--color-surface-mid);
-  border: none;
-  box-shadow: 0 0 0 1px var(--color-surface-lowest);
-  border-radius: var(--border-radius-lg);
-  cursor: pointer;
-  color: var(--text-primary-color);
-  padding: 4px 8px;
-  width: 100%;
-  height: 100%;
-}
-
-.view-toggle-button__button:hover {
-  background: var(--color-surface-high);
-}
-
-.view-toggle-button__button:active {
-  box-shadow: 0 0 0 1px var(--color-brand-active);
-}
-
-.excalidraw.theme--dark .view-toggle-button__button {
-  background: var(--color-surface-high);
-}
-
-.excalidraw.theme--dark .view-toggle-button__button:hover {
-  background: #363541;
-}
-
-.view-toggle-button__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin-right: 4px;
-}
-
-.view-toggle-button__label {
-  font-size: 0.8em;
-}
-
-@media (max-width: 640px) {
-  .view-toggle-button__label {
-    display: none;
-  }
-}
-`;
-
-if (typeof document !== "undefined") {
-  const styleElement = document.createElement("style");
-  styleElement.innerHTML = viewToggleButtonStyles;
-  document.head.appendChild(styleElement);
-}
 
 interface LayerUIProps {
   actionManager: ActionManager;
@@ -309,7 +238,7 @@ const LayerUI = ({
   const renderFixedSideContainer = () => {
     const shouldRenderSelectedShapeActions = showSelectedShapeActions(
       appState,
-      elements
+      elements,
     );
 
     const shouldShowStats =
@@ -415,7 +344,7 @@ const LayerUI = ({
               "layer-ui__wrapper__top-right zen-mode-transition",
               {
                 "transition-right": appState.zenModeEnabled,
-              }
+              },
             )}
           >
             {appState.collaborators.size > 0 && (
@@ -425,7 +354,6 @@ const LayerUI = ({
               />
             )}
             {renderTopRightUI?.(device.editor.isMobile, appState)}
-
             {!appState.viewModeEnabled &&
               appState.openDialog?.name !== "elementLinkSelector" &&
               // hide button when sidebar docked
@@ -456,7 +384,7 @@ const LayerUI = ({
           trackEvent(
             "sidebar",
             `toggleDock (${docked ? "dock" : "undock"})`,
-            `(${device.editor.isMobile ? "mobile" : "desktop"})`
+            `(${device.editor.isMobile ? "mobile" : "desktop"})`,
           );
         }}
       />
@@ -478,19 +406,19 @@ const LayerUI = ({
       <DefaultSidebar.Trigger
         __fallback
         icon={LibraryIcon}
-        title={capitalizeString(t("toolBar.libraryAndSearch"))}
+        title={capitalizeString(t("toolBar.library"))}
         onToggle={(open) => {
           if (open) {
             trackEvent(
               "sidebar",
               `${DEFAULT_SIDEBAR.name} (open)`,
-              `button (${device.editor.isMobile ? "mobile" : "desktop"})`
+              `button (${device.editor.isMobile ? "mobile" : "desktop"})`,
             );
           }
         }}
         tab={DEFAULT_SIDEBAR.defaultTab}
       >
-        {t("toolBar.libraryAndSearch")}
+        {t("toolBar.library")}
       </DefaultSidebar.Trigger>
       <DefaultOverwriteConfirmDialog />
       {appState.openDialog?.name === "ttd" && <TTDDialog __fallback />}
@@ -518,22 +446,18 @@ const LayerUI = ({
 
             if (selectedElements.length) {
               for (const element of selectedElements) {
-                mutateElement(
-                  element,
-                  {
-                    [altKey && eyeDropperState.swapPreviewOnAlt
-                      ? colorPickerType === "elementBackground"
-                        ? "strokeColor"
-                        : "backgroundColor"
-                      : colorPickerType === "elementBackground"
-                      ? "backgroundColor"
-                      : "strokeColor"]: color,
-                  },
-                  false
-                );
+                mutateElement(element, arrayToMap(elements), {
+                  [altKey && eyeDropperState.swapPreviewOnAlt
+                    ? colorPickerType === "elementBackground"
+                      ? "strokeColor"
+                      : "backgroundColor"
+                    : colorPickerType === "elementBackground"
+                    ? "backgroundColor"
+                    : "strokeColor"]: color,
+                });
                 ShapeCache.delete(element);
               }
-              Scene.getScene(selectedElements[0])?.triggerUpdate();
+              app.scene.triggerUpdate();
             } else if (colorPickerType === "elementBackground") {
               setAppState({
                 currentItemBackgroundColor: color,
@@ -550,14 +474,6 @@ const LayerUI = ({
           }}
         />
       )}
-      {appState.openDialog?.name === "settings" && (
-        <SettingsDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-          }}
-          closeOnClickOutside={false}
-        />
-      )}
       {appState.openDialog?.name === "help" && (
         <HelpDialog
           onClose={() => {
@@ -566,13 +482,6 @@ const LayerUI = ({
         />
       )}
       <ActiveConfirmDialog />
-      {appState.openDialog?.name === "replaceWithLibraryItem" && (
-        <ReplaceWithLibraryItemDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-          }}
-        />
-      )}
       {appState.openDialog?.name === "elementLinkSelector" && (
         <ElementLinkDialog
           sourceElementId={appState.openDialog.sourceElementId}
@@ -581,7 +490,7 @@ const LayerUI = ({
               openDialog: null,
             });
           }}
-          elementsMap={app.scene.getNonDeletedElementsMap()}
+          scene={app.scene}
           appState={appState}
           generateLinkForSelection={generateLinkForSelection}
         />
@@ -589,141 +498,6 @@ const LayerUI = ({
       <tunnels.OverwriteConfirmDialogTunnel.Out />
       {renderImageExportDialog()}
       {renderJSONExportDialog()}
-      {appState.openDialog?.name === "frameSelectorForPdf" && (
-        <FrameSelector
-          elements={elements}
-          onClose={() => {
-            setAppState({
-              openDialog: null,
-            });
-          }}
-          onSelectFrame={async (frame: ExcalidrawFrameLikeElement) => {
-            try {
-              console.log("Exporting frame:", frame);
-
-              // Now use only the elements from the canvas
-              const { exportingFrame, exportedElements } =
-                prepareElementsForExport(
-                  elements,
-                  { selectedElementIds: { [frame.id]: true } },
-                  true
-                );
-
-              console.log("Elements to export:", exportedElements.length);
-              console.log("Frame to export:", exportingFrame?.id);
-
-              // Log elements being exported
-              if (exportedElements.length === 0) {
-                console.warn("No elements to export for frame:", frame.id);
-                // Check if any elements in the scene have this frameId
-                const elementsInFrame = elements.filter(
-                  (el: NonDeletedExcalidrawElement) => el.frameId === frame.id
-                );
-                console.log(
-                  "Elements with this frameId:",
-                  elementsInFrame.length
-                );
-
-                // Try direct rendering with jsPDF to see if it works
-                try {
-                  const jsPDF = (await import("jspdf")).default;
-                  const pdf = new jsPDF({
-                    orientation: "landscape",
-                    unit: "px",
-                    format: [frame.width, frame.height],
-                  });
-
-                  pdf.setTextColor("black");
-                  pdf.setFont("Helvetica");
-                  pdf.setFontSize(20);
-                  pdf.text("Test PDF for debugging", 20, 30);
-
-                  const testPdfBlob = pdf.output("blob");
-                  const fileName = `${app.getName()}_test.pdf`;
-                  const link = document.createElement("a");
-                  link.href = URL.createObjectURL(testPdfBlob);
-                  link.download = fileName;
-                  link.click();
-                  URL.revokeObjectURL(link.href);
-
-                  console.log("Test PDF created successfully");
-                } catch (testError) {
-                  console.error("Error creating test PDF:", testError);
-                }
-              }
-
-              // Convert canvas to PDF
-              const pdfBlob = await exportToPdf(
-                exportedElements,
-                {
-                  ...appState,
-                  exportingFrame,
-                },
-                files
-              );
-
-              // Use fileSave from filesystem.ts instead of creating a link element
-              const fileName = `${app.getName()}`;
-
-              try {
-                console.log(
-                  "[DEBUG] PDF generated, size:",
-                  pdfBlob.size,
-                  "bytes"
-                );
-                console.log(
-                  "[DEBUG] Native FS supported:",
-                  nativeFileSystemSupported ? "YES" : "NO"
-                );
-                console.log(
-                  "[DEBUG] About to call fileSave for PDF - watch for the file system dialog"
-                );
-
-                await fileSave(pdfBlob, {
-                  name: fileName,
-                  extension: "pdf",
-                  description: "PDF Document",
-                });
-
-                console.log("[DEBUG] PDF file save completed successfully");
-
-                setAppState({
-                  openDialog: null,
-                  toast: {
-                    message: `Saved to ${fileName}.pdf`,
-                    duration: 2000,
-                  },
-                });
-              } catch (saveError: any) {
-                console.error("[DEBUG] Error saving PDF file:", saveError);
-
-                // If it's not an abort error (user cancellation), show an error message
-                if (saveError?.name !== "AbortError") {
-                  setAppState({
-                    openDialog: null,
-                    errorMessage: `Failed to export PDF: ${
-                      saveError.message || "Unknown error"
-                    }`,
-                  });
-                } else {
-                  console.log("[DEBUG] PDF save operation cancelled by user");
-                  setAppState({
-                    openDialog: null,
-                  });
-                }
-              }
-            } catch (error: any) {
-              console.error("Failed to save as PDF:", error);
-              setAppState({
-                openDialog: null,
-                errorMessage: `Failed to export PDF: ${
-                  error.message || "Unknown error"
-                }`,
-              });
-            }
-          }}
-        />
-      )}
       {appState.pasteDialog.shown && (
         <PasteChartDialog
           setAppState={setAppState}
@@ -735,67 +509,26 @@ const LayerUI = ({
           }
         />
       )}
-      {appState.openDialog?.name === "csvExport" && (
-        <CSVExportDialog
-          elements={getNonDeletedElements(elements)}
-          appState={appState as AppState}
-          files={app.files}
-          onCloseRequest={() => setAppState({ openDialog: null })}
-          onExportToCsv={(elements, appState, files, selectedProperties) => {
-            actionManager.executeAction(actionExportToCsv, "ui", {
-              selectedProperties,
-            });
-          }}
-          appName={app.getName()}
+      {device.editor.isMobile && (
+        <MobileMenu
+          app={app}
+          appState={appState}
+          elements={elements}
+          actionManager={actionManager}
+          renderJSONExportDialog={renderJSONExportDialog}
+          renderImageExportDialog={renderImageExportDialog}
+          setAppState={setAppState}
+          onLockToggle={onLockToggle}
+          onHandToolToggle={onHandToolToggle}
+          onPenModeToggle={onPenModeToggle}
+          renderTopRightUI={renderTopRightUI}
+          renderCustomStats={renderCustomStats}
+          renderSidebars={renderSidebars}
+          device={device}
+          renderWelcomeScreen={renderWelcomeScreen}
+          UIOptions={UIOptions}
         />
       )}
-      {appState.openDialog?.name === "selectSimilar" && (
-        <SelectSimilarDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-            window.EXCALIDRAW_SELECTSIMILAR_DIALOG.onSelectProperties([]);
-          }}
-          onSelectProperties={(selectedProperties) => {
-            setAppState({ openDialog: null });
-            window.EXCALIDRAW_SELECTSIMILAR_DIALOG.onSelectProperties(
-              selectedProperties
-            );
-          }}
-          properties={window.EXCALIDRAW_SELECTSIMILAR_DIALOG.properties}
-          referenceElement={
-            window.EXCALIDRAW_SELECTSIMILAR_DIALOG.referenceElement!
-          }
-        />
-      )}
-
-      {appState.openDialog?.name === "visibilitySettings" && (
-        <VisibilitySettingsDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-          }}
-          onSelectProperties={(selectedProperties) => {
-            setAppState({ openDialog: null });
-            window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG?.onSelectProperties(selectedProperties);
-            window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG.properties = selectedProperties;
-          }}
-          properties={window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG?.properties}
-        />
-      )}
-
-      {appState.openDialog?.name === "visibilitySettings" && (
-        <VisibilitySettingsDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-          }}
-          onSelectProperties={(selectedProperties) => {
-            setAppState({ openDialog: null });
-            window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG?.onSelectProperties(selectedProperties);
-            window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG.properties = selectedProperties;
-          }}
-          properties={window.EXCALIDRAW_VISIBILITYSETTINGS_DIALOG?.properties}
-        />
-      )}
-
       {!device.editor.isMobile && (
         <>
           <div
@@ -804,7 +537,7 @@ const LayerUI = ({
               appState.openSidebar &&
               isSidebarDocked &&
               device.editor.canFitSidebar
-                ? { width: `calc(100% - ${LIBRARY_SIDEBAR_WIDTH}px)` }
+                ? { width: `calc(100% - var(--right-sidebar-width))` }
                 : {}
             }
           >
@@ -877,7 +610,7 @@ const areEqual = (prevProps: LayerUIProps, nextProps: LayerUIProps) => {
       {
         selectedElementIds: isShallowEqual,
         selectedGroupIds: isShallowEqual,
-      }
+      },
     ) && isShallowEqual(prev, next)
   );
 };

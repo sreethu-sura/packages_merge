@@ -1,19 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import { EVENT } from "../../constants";
-import { KEYS } from "../../keys";
-import type { ElementsMap, ExcalidrawElement } from "../../element/types";
-import { deepCopyElement } from "../../element/newElement";
 import clsx from "clsx";
+import { useEffect, useRef, useState } from "react";
+
+import { EVENT, KEYS, cloneJSON } from "@excalidraw/common";
+
+import { deepCopyElement } from "@excalidraw/element";
+
+import { CaptureUpdateAction } from "@excalidraw/element";
+
+import type { ElementsMap, ExcalidrawElement } from "@excalidraw/element/types";
+
+import type { Scene } from "@excalidraw/element";
+
 import { useApp } from "../App";
 import { InlineIcon } from "../InlineIcon";
-import type { StatsInputProperty } from "./utils";
+
 import { SMALLEST_DELTA } from "./utils";
-import { StoreAction } from "../../store";
-import type Scene from "../../scene/Scene";
 
 import "./DragInput.scss";
+
+import type { StatsInputProperty } from "./utils";
 import type { AppState } from "../../types";
-import { cloneJSON } from "../../utils";
 
 export type DragInputCallbackType<
   P extends StatsInputProperty,
@@ -38,7 +44,7 @@ interface StatsDragInputProps<
 > {
   label: string | React.ReactNode;
   icon?: React.ReactNode;
-  value: number | "Mixed" | string;
+  value: number | "Mixed";
   elements: readonly E[];
   editable?: boolean;
   shouldKeepAspectRatio?: boolean;
@@ -103,34 +109,13 @@ const StatsDragInput = <
     }
     stateRef.current.updatePending = false;
 
-    // Extract number from string if it contains any non-numeric characters
-    const numericValue = updatedValue.replace(/[^0-9.-]/g, "");
-    const parsed = Number(numericValue);
-
+    const parsed = Number(updatedValue);
     if (isNaN(parsed)) {
       setInputValue(value.toString());
       return;
     }
 
-    // For position properties (x/y), treat input as feet and convert to pixels
-    // For y-axis, we need to invert the value (negative) to match screen coordinates
-    const isPositionProperty = property === "x" || property === "y";
-    let valueInPixels;
-
-    if (isPositionProperty) {
-      if (property === "y") {
-        // Invert Y value when converting from feet to pixels
-        valueInPixels = -parsed * appState.coordinateScale;
-      } else {
-        valueInPixels = parsed * appState.coordinateScale;
-      }
-    } else {
-      valueInPixels = parsed;
-    }
-
-    const rounded = Number(valueInPixels.toFixed(2));
-
-    // Get the original value
+    const rounded = Number(parsed.toFixed(2));
     const original = Number(value);
 
     // only update when
@@ -151,25 +136,11 @@ const StatsDragInput = <
         nextValue: rounded,
         property,
         originalAppState: appState,
-        setInputValue: (value) => {
-          // For position properties, convert pixel values back to feet for display
-          if (isPositionProperty) {
-            if (property === "y") {
-              // Invert Y value when converting from pixels to feet
-              const ftValue =
-                Math.round((-value / appState.coordinateScale) * 100) / 100;
-              setInputValue(String(ftValue));
-            } else {
-              const ftValue =
-                Math.round((value / appState.coordinateScale) * 100) / 100;
-              setInputValue(String(ftValue));
-            }
-          } else {
-            setInputValue(String(value));
-          }
-        },
+        setInputValue: (value) => setInputValue(String(value)),
       });
-      app.syncActionResult({ storeAction: StoreAction.CAPTURE });
+      app.syncActionResult({
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
     }
   };
 
@@ -247,13 +218,12 @@ const StatsDragInput = <
               y: number;
             } | null = null;
 
-            let originalElementsMap: Map<string, ExcalidrawElement> | null =
-              app.scene
-                .getNonDeletedElements()
-                .reduce((acc: ElementsMap, element) => {
-                  acc.set(element.id, deepCopyElement(element));
-                  return acc;
-                }, new Map());
+            let originalElementsMap: ElementsMap | null = app.scene
+              .getNonDeletedElements()
+              .reduce((acc: ElementsMap, element) => {
+                acc.set(element.id, deepCopyElement(element));
+                return acc;
+              }, new Map());
 
             let originalElements: readonly E[] | null = elements.map(
               (element) => originalElementsMap!.get(element.id) as E,
@@ -313,7 +283,9 @@ const StatsDragInput = <
                 false,
               );
 
-              app.syncActionResult({ storeAction: StoreAction.CAPTURE });
+              app.syncActionResult({
+                captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+              });
 
               lastPointer = null;
               accumulatedChange = 0;

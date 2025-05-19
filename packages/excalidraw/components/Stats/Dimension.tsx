@@ -1,18 +1,22 @@
-import type { ExcalidrawElement } from "../../element/types";
-import DragInput from "./DragInput";
-import type { DragInputCallbackType } from "./DragInput";
-import { getStepSizedValue, isPropertyEditable } from "./utils";
-import { MIN_WIDTH_OR_HEIGHT } from "../../constants";
-import { resizeSingleElement } from "../../element/resizeElements";
-import type Scene from "../../scene/Scene";
-import type { AppState } from "../../types";
-import { isImageElement } from "../../element/typeChecks";
+import { clamp, round } from "@excalidraw/math";
+
+import { MIN_WIDTH_OR_HEIGHT } from "@excalidraw/common";
 import {
   MINIMAL_CROP_SIZE,
   getUncroppedWidthAndHeight,
-} from "../../element/cropElement";
-import { mutateElement } from "../../element/mutateElement";
-import { clamp, round } from "../../../math";
+} from "@excalidraw/element";
+import { resizeSingleElement } from "@excalidraw/element";
+import { isImageElement } from "@excalidraw/element";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
+import type { Scene } from "@excalidraw/element";
+
+import DragInput from "./DragInput";
+import { getStepSizedValue, isPropertyEditable } from "./utils";
+
+import type { DragInputCallbackType } from "./DragInput";
+import type { AppState } from "../../types";
 
 interface DimensionDragInputProps {
   property: "width" | "height";
@@ -39,7 +43,6 @@ const handleDimensionChange: DragInputCallbackType<
   originalAppState,
   instantChange,
   scene,
-  setInputValue,
 }) => {
   const elementsMap = scene.getNonDeletedElementsMap();
   const origElement = originalElements[0];
@@ -110,7 +113,7 @@ const handleDimensionChange: DragInputCallbackType<
           };
         }
 
-        mutateElement(element, {
+        scene.mutateElement(element, {
           crop: nextCrop,
           width: nextCrop.width / (crop.naturalWidth / uncroppedWidth),
           height: nextCrop.height / (crop.naturalHeight / uncroppedHeight),
@@ -141,7 +144,7 @@ const handleDimensionChange: DragInputCallbackType<
         height: nextCropHeight,
       };
 
-      mutateElement(element, {
+      scene.mutateElement(element, {
         crop: nextCrop,
         width: nextCrop.width / (crop.naturalWidth / uncroppedWidth),
         height: nextCrop.height / (crop.naturalHeight / uncroppedHeight),
@@ -151,22 +154,19 @@ const handleDimensionChange: DragInputCallbackType<
     }
 
     if (nextValue !== undefined) {
-      // Convert feet to pixels for internal calculations
-      const valueInPixels = nextValue * originalAppState.coordinateScale;
-
       const nextWidth = Math.max(
         property === "width"
-          ? valueInPixels
+          ? nextValue
           : keepAspectRatio
-          ? valueInPixels * aspectRatio
+          ? nextValue * aspectRatio
           : origElement.width,
         MIN_WIDTH_OR_HEIGHT,
       );
       const nextHeight = Math.max(
         property === "height"
-          ? valueInPixels
+          ? nextValue
           : keepAspectRatio
-          ? valueInPixels / aspectRatio
+          ? nextValue / aspectRatio
           : origElement.height,
         MIN_WIDTH_OR_HEIGHT,
       );
@@ -176,23 +176,13 @@ const handleDimensionChange: DragInputCallbackType<
         nextHeight,
         latestElement,
         origElement,
-        elementsMap,
         originalElementsMap,
+        scene,
         property === "width" ? "e" : "s",
         {
           shouldMaintainAspectRatio: keepAspectRatio,
         },
       );
-
-      // Convert pixel values back to feet for display
-      const displayValue =
-        Math.round(
-          ((property === "width" ? nextWidth : nextHeight) /
-            originalAppState.coordinateScale) *
-            100,
-        ) / 100;
-
-      setInputValue?.(displayValue);
 
       return;
     }
@@ -233,8 +223,8 @@ const handleDimensionChange: DragInputCallbackType<
       nextHeight,
       latestElement,
       origElement,
-      elementsMap,
       originalElementsMap,
+      scene,
       property === "width" ? "e" : "s",
       {
         shouldMaintainAspectRatio: keepAspectRatio,
@@ -269,16 +259,12 @@ const DimensionDragInput = ({
     }
   }
 
-  // Convert pixel value to feet
-  const displayValue =
-    Math.round((value / appState.coordinateScale) * 100) / 100;
-
   return (
     <DragInput
       label={property === "width" ? "W" : "H"}
       elements={[element]}
       dragInputCallback={handleDimensionChange}
-      value={displayValue}
+      value={value}
       editable={isPropertyEditable(element, property)}
       scene={scene}
       appState={appState}

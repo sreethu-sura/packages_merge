@@ -1,10 +1,14 @@
-import type { ReactNode } from "react";
 import React, { memo, useEffect, useState } from "react";
-import { EmptyLibraryUnit, LibraryUnit } from "./LibraryUnit";
-import type { LibraryItem } from "../types";
-import type { ExcalidrawElement, NonDeleted } from "../element/types";
-import type { SvgCache } from "../hooks/useLibraryItemSvg";
+
+import type { ExcalidrawElement, NonDeleted } from "@excalidraw/element/types";
+
 import { useTransition } from "../hooks/useTransition";
+
+import { EmptyLibraryUnit, LibraryUnit } from "./LibraryUnit";
+
+import type { SvgCache } from "../hooks/useLibraryItemSvg";
+import type { LibraryItem } from "../types";
+import type { ReactNode } from "react";
 
 type LibraryOrPendingItem = (
   | LibraryItem
@@ -29,20 +33,7 @@ export const LibraryMenuSectionGrid = ({
 }: {
   children: ReactNode;
 }) => {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gridGap: "0.75rem",
-        padding: "0.5rem",
-        width: "100%",
-        boxSizing: "border-box",
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="library-menu-items-container__grid">{children}</div>;
 };
 
 export const LibraryMenuSection = memo(
@@ -80,8 +71,6 @@ export const LibraryMenuSection = memo(
               onToggle={onItemSelectToggle}
               onDrag={onItemDrag}
               key={item?.id ?? i}
-              name={item?.id ? (item as LibraryItem).name : undefined}
-              libraryItem={item?.id ? (item as LibraryItem) : undefined}
             />
           ) : (
             <EmptyLibraryUnit key={i} />

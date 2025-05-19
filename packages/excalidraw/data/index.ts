@@ -1,33 +1,42 @@
 import {
-  copyBlobToClipboardAsPng,
-  copyTextToSystemClipboard,
-} from "../clipboard";
-import {
   DEFAULT_EXPORT_PADDING,
   DEFAULT_FILENAME,
   IMAGE_MIME_TYPES,
   isFirefox,
   MIME_TYPES,
-} from "../constants";
-import { getNonDeletedElements } from "../element";
-import { isFrameLikeElement } from "../element/typeChecks";
+  cloneJSON,
+  SVG_DOCUMENT_PREAMBLE,
+} from "@excalidraw/common";
+
+import { getNonDeletedElements } from "@excalidraw/element";
+
+import { isFrameLikeElement } from "@excalidraw/element";
+
+import { getElementsOverlappingFrame } from "@excalidraw/element";
+
 import type {
   ExcalidrawElement,
   ExcalidrawFrameLikeElement,
   NonDeletedExcalidrawElement,
-} from "../element/types";
-import { getElementsOverlappingFrame } from "../frame";
+} from "@excalidraw/element/types";
+
+import {
+  copyBlobToClipboardAsPng,
+  copyTextToSystemClipboard,
+} from "../clipboard";
+
 import { t } from "../i18n";
 import { getSelectedElements, isSomeElementSelected } from "../scene";
 import { exportToCanvas, exportToSvg } from "../scene/export";
-import type { ExportType } from "../scene/types";
-import type { AppState, BinaryFiles } from "../types";
-import { cloneJSON } from "../utils";
+
 import { canvasToBlob } from "./blob";
-import type { FileSystemHandle } from "./filesystem";
 import { fileSave } from "./filesystem";
 import { serializeAsJSON } from "./json";
 
+import type { FileSystemHandle } from "./filesystem";
+
+import type { ExportType } from "../scene/types";
+import type { AppState, BinaryFiles } from "../types";
 
 export { loadFromBlob } from "./blob";
 export { loadFromJSON, saveAsJSON } from "./json";
@@ -50,12 +59,12 @@ export const prepareElementsForExport = (
   let exportingFrame: ExcalidrawFrameLikeElement | null = null;
   let exportedElements = isExportingSelection
     ? getSelectedElements(
-      elements,
-      { selectedElementIds },
-      {
-        includeBoundTextElement: true,
-      },
-    )
+        elements,
+        { selectedElementIds },
+        {
+          includeBoundTextElement: true,
+        },
+      )
     : elements;
 
   if (isExportingSelection) {
@@ -126,12 +135,16 @@ export const exportCanvas = async (
     if (type === "svg") {
       return fileSave(
         svgPromise.then((svg) => {
-          return new Blob([svg.outerHTML], { type: MIME_TYPES.svg });
+          // adding SVG preamble so that older software parse the SVG file
+          // properly
+          return new Blob([SVG_DOCUMENT_PREAMBLE + svg.outerHTML], {
+            type: MIME_TYPES.svg,
+          });
         }),
         {
           description: "Export to SVG",
           name,
-          extension: "svg",
+          extension: appState.exportEmbedScene ? "excalidraw.svg" : "svg",
           mimeTypes: [IMAGE_MIME_TYPES.svg],
           fileHandle,
         },
@@ -171,7 +184,7 @@ export const exportCanvas = async (
     return fileSave(blob, {
       description: "Export to PNG",
       name,
-      extension: "png",
+      extension: appState.exportEmbedScene ? "excalidraw.png" : "png",
       mimeTypes: [IMAGE_MIME_TYPES.png],
       fileHandle,
     });

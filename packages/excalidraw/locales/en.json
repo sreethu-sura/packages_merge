@@ -91,24 +91,16 @@
     "untitled": "Untitled",
     "name": "Name",
     "yourName": "Your name",
-    "nameYourLibraryItem": "Name your library item",
     "madeWithExcalidraw": "Made with Excalidraw",
     "group": "Group selection",
     "ungroup": "Ungroup selection",
-    "numberRackElements": "Number rack elements",
-    "numberRowElements": "Number row elements",
-    "numberRowAndRackElements": "Number row and rack elements",
     "collaborators": "Collaborators",
     "toggleGrid": "Toggle grid",
     "addToLibrary": "Add to library",
     "removeFromLibrary": "Remove from library",
     "libraryLoadingMessage": "Loading library…",
-    "toggleView": "Toggle View",
-    "topView": "Top View",
-    "elevationView": "Elevation View",
     "libraries": "Browse libraries",
     "loadingScene": "Loading scene…",
-    "editLibraryItem": "Edit library item",
     "loadScene": "Load scene from file",
     "align": "Align",
     "alignTop": "Align top",
@@ -135,16 +127,6 @@
     "unbindText": "Unbind text",
     "bindText": "Bind text to the container",
     "createContainerFromText": "Wrap text in a container",
-    "customProperties": "Custom Properties",
-    "propertyName": "Property Name",
-    "propertyValue": "Property Value",
-    "noCustomProperties": "No custom properties yet",
-    "propertyExists": "Property already exists",
-    "overwritePropertyName": "Property \"{{name}}\" already exists. Do you want to overwrite it?",
-    "selectSimilar": "Select similar elements",
-    "selectSimilarProperties": "Select Elements with Similar Properties",
-    "visibilitySettings": "Visibility settings",
-    "selectPropertiesToMatch": " ",
     "link": {
       "edit": "Edit link",
       "editEmbed": "Edit embeddable link",
@@ -165,12 +147,6 @@
       "lockAll": "Lock all",
       "unlockAll": "Unlock all"
     },
-    "elementVisibility": {
-      "hide": "Hide",
-      "show": "Show",
-      "hideAll": "Hide all",
-      "showAll": "Show all"
-    },
     "statusPublished": "Published",
     "sidebarLock": "Keep sidebar open",
     "selectAllElementsInFrame": "Select all elements in frame",
@@ -190,25 +166,8 @@
     "copyElementLink": "Copy link to object",
     "linkToElement": "Link to object",
     "wrapSelectionInFrame": "Wrap selection in frame",
-    "darkMode": "Dark mode",
-    "lightMode": "Light mode",
-    "systemMode": "System mode",
-    "zenMode": "Zen mode",
-    "objectsSnapMode": "Snap to objects",
-    "exitZenMode": "Exit zen mode",
-    "toggleMode": "Toggle mode",
-    "insertMode": "Insert mode",
-    "normalMode": "Normal mode",
-    "cancel": "Cancel",
-    "selectFrame": "Select frame to export",
-    "noFrames": "No frames found on canvas. Create a frame first to use this feature.",
-    "rackNumber": {
-      "lock": "Lock rack number",
-      "unlock": "Unlock rack number",
-      "lockAll": "Lock all rack numbers",
-      "unlockAll": "Unlock all rack numbers"
-    },
-    "replaceWithLibraryItem": "Replace with Library Item"
+    "tab": "Tab",
+    "shapeSwitch": "Switch shape"
   },
   "elementLink": {
     "title": "Link to object",
@@ -216,8 +175,8 @@
     "notFound": "Linked object wasn't found on canvas."
   },
   "library": {
-    "noItems": "...",
-    "hint_emptyLibrary": " ",
+    "noItems": "No items added yet...",
+    "hint_emptyLibrary": "Select an item on canvas to add it here, or install a library from the public repository, below.",
     "hint_emptyPrivateLibrary": "Select an item on canvas to add it here."
   },
   "search": {
@@ -225,7 +184,9 @@
     "noMatch": "No matches found...",
     "singleResult": "result",
     "multipleResults": "results",
-    "placeholder": "Find text on canvas..."
+    "placeholder": "Find text on canvas...",
+    "frames": "Frames",
+    "texts": "Texts"
   },
   "buttons": {
     "clearReset": "Reset the canvas",
@@ -237,6 +198,7 @@
     "save": "Save to current file",
     "saveAs": "Save as",
     "load": "Open",
+    "getShareableLink": "Get shareable link",
     "close": "Close",
     "selectLanguage": "Select language",
     "scrollBackToContent": "Scroll back to content",
@@ -257,9 +219,6 @@
     "zenMode": "Zen mode",
     "objectsSnapMode": "Snap to objects",
     "exitZenMode": "Exit zen mode",
-    "toggleMode": "Toggle mode",
-    "insertMode": "Insert mode",
-    "normalMode": "Normal mode",
     "cancel": "Cancel",
     "clear": "Clear",
     "remove": "Remove",
@@ -267,14 +226,12 @@
     "publishLibrary": "Publish",
     "submit": "Submit",
     "confirm": "Confirm",
-    "embeddableInteractionButton": "Click to interact",
-    "addProperty": "Add property",
-    "delete": "Delete",
-    "selectAll":"Select all",
-    "numberingElements": "Number elements"
+    "embeddableInteractionButton": "Click to interact"
   },
   "alerts": {
     "clearReset": "This will clear the whole canvas. Are you sure?",
+    "couldNotCreateShareableLink": "Couldn't create shareable link.",
+    "couldNotCreateShareableLinkTooBig": "Couldn't create shareable link: the scene is too big",
     "couldNotLoadInvalidFile": "Couldn't load invalid file",
     "importBackendFailed": "Importing from backend failed.",
     "cannotExportEmptyCanvas": "Cannot export empty canvas.",
@@ -319,11 +276,11 @@
     },
     "asyncPasteFailedOnRead": "Couldn't paste (couldn't read from system clipboard).",
     "asyncPasteFailedOnParse": "Couldn't paste.",
-    "copyToSystemClipboardFailed": "Couldn't copy to clipboard.",
-    "replaceWithLibraryItemError": "Please select a single element to replace"
+    "copyToSystemClipboardFailed": "Couldn't copy to clipboard."
   },
   "toolBar": {
     "selection": "Selection",
+    "lasso": "Lasso selection",
     "image": "Insert image",
     "rectangle": "Rectangle",
     "diamond": "Diamond",
@@ -333,7 +290,6 @@
     "freedraw": "Draw",
     "text": "Text",
     "library": "Library",
-    "libraryAndSearch": "Library & Search",
     "lock": "Keep selected tool active after drawing",
     "penMode": "Pen mode - prevent touch",
     "link": "Add / Update link for a selected shape",
@@ -344,7 +300,8 @@
     "laser": "Laser pointer",
     "hand": "Hand (panning tool)",
     "extraTools": "More tools",
-    "mermaidToExcalidraw": "Mermaid to Excalidraw"
+    "mermaidToExcalidraw": "Mermaid to Excalidraw",
+    "convertElementType": "Toggle shape type"
   },
   "element": {
     "rectangle": "Rectangle",
@@ -369,7 +326,7 @@
   },
   "hints": {
     "dismissSearch": "Escape to dismiss search",
-    "canvasPanning": " ",
+    "canvasPanning": "To move canvas, hold mouse wheel or spacebar while dragging, or use the hand tool",
     "linearElement": "Click to start multiple points, drag for single line",
     "arrowTool": "Click to start multiple points, drag for single line. Press {{arrowShortcut}} again to change arrow type.",
     "freeDraw": "Click and drag, release when you're finished",
@@ -429,8 +386,12 @@
     "disk_title": "Save to disk",
     "disk_details": "Export the scene data to a file from which you can import later.",
     "disk_button": "Save to file",
+    "link_title": "Shareable link",
     "link_details": "Export as a read-only link.",
-    "link_button": "Export to Link"
+    "link_button": "Export to Link",
+    "excalidrawplus_description": "Save the scene to your Excalidraw+ workspace.",
+    "excalidrawplus_button": "Export",
+    "excalidrawplus_exportError": "Couldn't export to Excalidraw+ at this moment..."
   },
   "helpDialog": {
     "blog": "Read our blog",
@@ -553,8 +514,8 @@
     "addedToLibrary": "Added to library",
     "copyStyles": "Copied styles.",
     "copyToClipboard": "Copied to clipboard.",
-    "copyToClipboardAsPng": "{{exportColorScheme}} {{exportSelection}} copied to clipboard as PNG",
-    "copyToClipboardAsSvg": "{{exportColorScheme}} {{exportSelection}} copied to clipboard as SVG",
+    "copyToClipboardAsPng": "Copied {{exportSelection}} to clipboard as PNG\n({{exportColorScheme}})",
+    "copyToClipboardAsSvg": "Copied {{exportSelection}} to clipboard as SVG\n({{exportColorScheme}})",
     "fileSaved": "File saved.",
     "fileSavedToFilename": "Saved to {filename}",
     "canvas": "canvas",
@@ -562,8 +523,7 @@
     "pasteAsSingleElement": "Use {{shortcut}} to paste as a single element,\nor paste into an existing text editor",
     "unableToEmbed": "Embedding this url is currently not allowed. Raise an issue on GitHub to request the url whitelisted",
     "unrecognizedLinkFormat": "The link you embedded does not match the expected format. Please try to paste the 'embed' string provided by the source site",
-    "elementLinkCopied": "Link copied to clipboard",
-    "movedToCanvas": "Moved {{count}} element(s) to {{target}} canvas"
+    "elementLinkCopied": "Link copied to clipboard"
   },
   "colors": {
     "transparent": "Transparent",
@@ -584,9 +544,9 @@
   },
   "welcomeScreen": {
     "app": {
-      "center_heading": "All your data is saved locally in your browser",
-      "center_heading_plus": " ",
-      "menuHint": "Export, preferences, ..."
+      "center_heading": "All your data is saved locally in your browser.",
+      "center_heading_plus": "Did you want to go to the Excalidraw+ instead?",
+      "menuHint": "Export, preferences, languages, ..."
     },
     "defaults": {
       "menuHint": "Export, preferences, and more...",
@@ -596,6 +556,7 @@
     }
   },
   "colorPicker": {
+    "color": "Color",
     "mostUsedCustomColors": "Most used custom colors",
     "colors": "Colors",
     "shades": "Shades",
@@ -613,6 +574,11 @@
         "title": "Save to disk",
         "button": "Save to disk",
         "description": "Export the scene data to a file from which you can import later."
+      },
+      "excalidrawPlus": {
+        "title": "Excalidraw+",
+        "button": "Export to Excalidraw+",
+        "description": "Save the scene to your Excalidraw+ workspace."
       }
     },
     "modal": {

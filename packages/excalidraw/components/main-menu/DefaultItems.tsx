@@ -1,11 +1,35 @@
+import clsx from "clsx";
+
+import { THEME } from "@excalidraw/common";
+
+import type { Theme } from "@excalidraw/element/types";
+
+import {
+  actionClearCanvas,
+  actionLoadScene,
+  actionSaveToActiveFile,
+  actionShortcuts,
+  actionToggleSearchMenu,
+  actionToggleTheme,
+} from "../../actions";
 import { getShortcutFromShortcutName } from "../../actions/shortcuts";
+import { trackEvent } from "../../analytics";
+import { useUIAppState } from "../../context/ui-appState";
+import { useSetAtom } from "../../editor-jotai";
 import { useI18n } from "../../i18n";
+import { activeConfirmDialogAtom } from "../ActiveConfirmDialog";
 import {
   useExcalidrawSetAppState,
   useExcalidrawActionManager,
   useExcalidrawElements,
   useAppProps,
 } from "../App";
+import { openConfirmModal } from "../OverwriteConfirm/OverwriteConfirmState";
+import Trans from "../Trans";
+import DropdownMenuItem from "../dropdownMenu/DropdownMenuItem";
+import DropdownMenuItemContentRadio from "../dropdownMenu/DropdownMenuItemContentRadio";
+import DropdownMenuItemLink from "../dropdownMenu/DropdownMenuItemLink";
+import { GithubIcon, DiscordIcon, XBrandIcon } from "../icons";
 import {
   boltIcon,
   DeviceDesktopIcon,
@@ -19,36 +43,9 @@ import {
   SunIcon,
   TrashIcon,
   usersIcon,
-  PdfIcon,
-  CsvIcon,
-  SettingsIcon,
 } from "../icons";
-import { GithubIcon, DiscordIcon, XBrandIcon } from "../icons";
-import DropdownMenuItem from "../dropdownMenu/DropdownMenuItem";
-import DropdownMenuItemLink from "../dropdownMenu/DropdownMenuItemLink";
-import {
-  actionClearCanvas,
-  actionLoadScene,
-  actionSaveToActiveFile,
-  actionShortcuts,
-  actionToggleSearchMenu,
-  actionToggleTheme,
-  actionSaveToPdf,
-  actionExportToCsv,
-} from "../../actions";
-import { ActionManager } from "../../actions/manager";
-import clsx from "clsx";
-import { activeConfirmDialogAtom } from "../ActiveConfirmDialog";
-import { useSetAtom } from "../../editor-jotai";
-import { useUIAppState } from "../../context/ui-appState";
-import { openConfirmModal } from "../OverwriteConfirm/OverwriteConfirmState";
-import Trans from "../Trans";
-import DropdownMenuItemContentRadio from "../dropdownMenu/DropdownMenuItemContentRadio";
-import { THEME } from "../../constants";
-import type { Theme } from "../../element/types";
-import { trackEvent } from "../../analytics";
+
 import "./DefaultItems.scss";
-import { actionSettings } from "../../actions/actionSettings";
 
 export const LoadScene = () => {
   const { t } = useI18n();
@@ -60,8 +57,23 @@ export const LoadScene = () => {
   }
 
   const handleSelect = async () => {
-    // Skip confirmation dialog and directly execute the action
-    actionManager.executeAction(actionLoadScene);
+    if (
+      !elements.length ||
+      (await openConfirmModal({
+        title: t("overwriteConfirm.modal.loadFromFile.title"),
+        actionLabel: t("overwriteConfirm.modal.loadFromFile.button"),
+        color: "warning",
+        description: (
+          <Trans
+            i18nKey="overwriteConfirm.modal.loadFromFile.description"
+            bold={(text) => <strong>{text}</strong>}
+            br={() => <br />}
+          />
+        ),
+      }))
+    ) {
+      actionManager.executeAction(actionLoadScene);
+    }
   };
 
   return (
@@ -114,56 +126,6 @@ export const SaveAsImage = () => {
   );
 };
 SaveAsImage.displayName = "SaveAsImage";
-
-export const SaveToPdf = () => {
-  const actionManager = useExcalidrawActionManager();
-  const { t } = useI18n();
-  return (
-    <DropdownMenuItem
-      icon={PdfIcon}
-      onSelect={() => {
-        actionManager.executeAction(actionSaveToPdf);
-      }}
-      aria-label="Save to PDF"
-    >
-      Save to PDF
-    </DropdownMenuItem>
-  );
-};
-SaveToPdf.displayName = "SaveToPdf";
-
-export const ExportToCsv = () => {
-  const actionManager = useExcalidrawActionManager();
-  const { t } = useI18n();
-  return (
-    <DropdownMenuItem
-      icon={CsvIcon}
-      onSelect={() => {
-        actionManager.executeAction(actionExportToCsv);
-      }}
-      aria-label="Save to CSV"
-    >
-      Save to CSV
-    </DropdownMenuItem>
-  );
-};
-ExportToCsv.displayName = "ExportToCsv";
-
-export const Settings = (opts?: { className?: string }) => {
-  const actionManager = useExcalidrawActionManager();
-
-  return (
-    <DropdownMenuItem
-      data-testid="settings-menu-item"
-      icon={SettingsIcon}
-      onSelect={() => actionManager.executeAction(actionSettings)}
-      aria-label="Settings"
-    >
-      Settings
-    </DropdownMenuItem>
-  );
-};
-Settings.displayName = "Settings";
 
 export const CommandPalette = (opts?: { className?: string }) => {
   const setAppState = useExcalidrawSetAppState();

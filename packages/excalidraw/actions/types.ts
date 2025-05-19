@@ -1,8 +1,10 @@
-import type React from "react";
 import type {
   ExcalidrawElement,
   OrderedExcalidrawElement,
-} from "../element/types";
+} from "@excalidraw/element/types";
+
+import type { CaptureUpdateActionType } from "@excalidraw/element";
+
 import type {
   AppClassProperties,
   AppState,
@@ -10,7 +12,7 @@ import type {
   BinaryFiles,
   UIAppState,
 } from "../types";
-import type { StoreActionType } from "../store";
+import type React from "react";
 
 export type ActionSource =
   | "ui"
@@ -22,12 +24,12 @@ export type ActionSource =
 /** if false, the action should be prevented */
 export type ActionResult =
   | {
-    elements?: readonly ExcalidrawElement[] | null;
-    appState?: Partial<AppState> | null;
-    files?: BinaryFiles | null;
-    storeAction: StoreActionType;
-    replaceFiles?: boolean;
-  }
+      elements?: readonly ExcalidrawElement[] | null;
+      appState?: Partial<AppState> | null;
+      files?: BinaryFiles | null;
+      captureUpdate: CaptureUpdateActionType;
+      replaceFiles?: boolean;
+    }
   | false;
 
 type ActionFn = (
@@ -135,27 +137,12 @@ export type ActionName =
   | "autoResize"
   | "elementStats"
   | "searchMenu"
-  | "selectSimilar"
   | "copyElementLink"
   | "linkToElement"
   | "cropEditor"
   | "wrapSelectionInFrame"
-  | "saveToPdf"
-  | "exportToCsv"
-  | "exportToExcel"
-  | "settings"
-  | "toggleView"
-  | "toggleElementVisibility"
-  | "showAllElements"
-  | "toggleMode"
-  | "toggleInsertMode"
-  | "numberRackElements"
-  | "numberRowElements"
-  | "numberRowAndRackElements"
-  | "moveToOtherCanvas"
-  | "lockRackNumber"
-  | "replaceWithLibraryItem"
-  | "visibilitySettings";
+  | "toggleLassoTool"
+  | "toggleShapeSwitch";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];
@@ -169,19 +156,19 @@ export type PanelComponentProps = {
 export interface Action {
   name: ActionName;
   label:
-  | string
-  | ((
-    elements: readonly ExcalidrawElement[],
-    appState: Readonly<AppState>,
-    app: AppClassProperties,
-  ) => string);
+    | string
+    | ((
+        elements: readonly ExcalidrawElement[],
+        appState: Readonly<AppState>,
+        app: AppClassProperties,
+      ) => string);
   keywords?: string[];
   icon?:
-  | React.ReactNode
-  | ((
-    appState: UIAppState,
-    elements: readonly ExcalidrawElement[],
-  ) => React.ReactNode);
+    | React.ReactNode
+    | ((
+        appState: UIAppState,
+        elements: readonly ExcalidrawElement[],
+      ) => React.ReactNode);
   PanelComponent?: React.FC<PanelComponentProps>;
   perform: ActionFn;
   keyPriority?: number;
@@ -199,26 +186,26 @@ export interface Action {
   ) => boolean;
   checked?: (appState: Readonly<AppState>) => boolean;
   trackEvent:
-  | false
-  | {
-    category:
-    | "toolbar"
-    | "element"
-    | "canvas"
-    | "settings"
-    | "export"
-    | "history"
-    | "menu"
-    | "collab"
-    | "hyperlink"
-    | "search_menu";
-    action?: string;
-    predicate?: (
-      appState: Readonly<AppState>,
-      elements: readonly ExcalidrawElement[],
-      value: any,
-    ) => boolean;
-  };
+    | false
+    | {
+        category:
+          | "toolbar"
+          | "element"
+          | "canvas"
+          | "export"
+          | "history"
+          | "menu"
+          | "collab"
+          | "hyperlink"
+          | "search_menu"
+          | "shape_switch";
+        action?: string;
+        predicate?: (
+          appState: Readonly<AppState>,
+          elements: readonly ExcalidrawElement[],
+          value: any,
+        ) => boolean;
+      };
   /** if set to `true`, allow action to be performed in viewMode.
    *  Defaults to `false` */
   viewMode?: boolean;

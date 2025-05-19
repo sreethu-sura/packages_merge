@@ -1,32 +1,35 @@
 import {
-  ExportIcon,
-  questionCircle,
-  saveAs,
-  PdfIcon,
-  CsvIcon,
-} from "../components/icons";
+  KEYS,
+  DEFAULT_EXPORT_PADDING,
+  EXPORT_SCALES,
+  THEME,
+} from "@excalidraw/common";
+
+import { getNonDeletedElements } from "@excalidraw/element";
+
+import { CaptureUpdateAction } from "@excalidraw/element";
+
+import type { Theme } from "@excalidraw/element/types";
+
+import { useDevice } from "../components/App";
+import { CheckboxItem } from "../components/CheckboxItem";
+import { DarkModeToggle } from "../components/DarkModeToggle";
 import { ProjectName } from "../components/ProjectName";
 import { ToolButton } from "../components/ToolButton";
 import { Tooltip } from "../components/Tooltip";
-import { DarkModeToggle } from "../components/DarkModeToggle";
+import { ExportIcon, questionCircle, saveAs } from "../components/icons";
 import { loadFromJSON, saveAsJSON } from "../data";
-import { resaveAsImageWithScene } from "../data/resave";
-import { t } from "../i18n";
-import { useDevice } from "../components/App";
-import { KEYS } from "../keys";
-import { register } from "./register";
-import { CheckboxItem } from "../components/CheckboxItem";
-import { getExportSize } from "../scene/export";
-import { DEFAULT_EXPORT_PADDING, EXPORT_SCALES, THEME } from "../constants";
-import { getSelectedElements, isSomeElementSelected } from "../scene";
-import { getNonDeletedElements } from "../element";
 import { isImageFileHandle } from "../data/blob";
-import { nativeFileSystemSupported, fileSave } from "../data/filesystem";
-import type { Theme } from "../element/types";
-import { exportToCsv } from "../data/exportToCsv";
-import { serializeAsJSON } from "../data/json";
+import { nativeFileSystemSupported } from "../data/filesystem";
+import { resaveAsImageWithScene } from "../data/resave";
+
+import { t } from "../i18n";
+import { getSelectedElements, isSomeElementSelected } from "../scene";
+import { getExportSize } from "../scene/export";
+
 import "../components/ToolIcon.scss";
-import { StoreAction } from "../store";
+
+import { register } from "./register";
 
 export const actionChangeProjectName = register({
   name: "changeProjectName",
@@ -35,7 +38,7 @@ export const actionChangeProjectName = register({
   perform: (_elements, appState, value) => {
     return {
       appState: { ...appState, name: value },
-      storeAction: StoreAction.NONE,
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
   PanelComponent: ({ appState, updateData, appProps, data, app }) => (
@@ -55,7 +58,7 @@ export const actionChangeExportScale = register({
   perform: (_elements, appState, value) => {
     return {
       appState: { ...appState, exportScale: value },
-      storeAction: StoreAction.NONE,
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
   PanelComponent: ({ elements: allElements, appState, updateData }) => {
@@ -105,7 +108,7 @@ export const actionChangeExportBackground = register({
   perform: (_elements, appState, value) => {
     return {
       appState: { ...appState, exportBackground: value },
-      storeAction: StoreAction.NONE,
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
   PanelComponent: ({ appState, updateData }) => (
@@ -125,7 +128,7 @@ export const actionChangeExportEmbedScene = register({
   perform: (_elements, appState, value) => {
     return {
       appState: { ...appState, exportEmbedScene: value },
-      storeAction: StoreAction.NONE,
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
   PanelComponent: ({ appState, updateData }) => (
@@ -167,7 +170,7 @@ export const actionSaveToActiveFile = register({
         : await saveAsJSON(elements, appState, app.files, app.getName());
 
       return {
-        storeAction: StoreAction.NONE,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
         appState: {
           ...appState,
           fileHandle,
@@ -189,7 +192,7 @@ export const actionSaveToActiveFile = register({
       } else {
         console.warn(error);
       }
-      return { storeAction: StoreAction.NONE };
+      return { captureUpdate: CaptureUpdateAction.EVENTUALLY };
     }
   },
   keyTest: (event) =>
@@ -214,12 +217,12 @@ export const actionSaveFileToDisk = register({
         app.getName(),
       );
       return {
-        storeAction: StoreAction.NONE,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
         appState: {
           ...appState,
           openDialog: null,
           fileHandle,
-          toast: { message: t("toast.fileSaved"), duration: 2000 },
+          toast: { message: t("toast.fileSaved") },
         },
       };
     } catch (error: any) {
@@ -228,7 +231,7 @@ export const actionSaveFileToDisk = register({
       } else {
         console.warn(error);
       }
-      return { storeAction: StoreAction.NONE };
+      return { captureUpdate: CaptureUpdateAction.EVENTUALLY };
     }
   },
   keyTest: (event) =>
@@ -267,7 +270,7 @@ export const actionLoadScene = register({
         elements: loadedElements,
         appState: loadedAppState,
         files,
-        storeAction: StoreAction.CAPTURE,
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       };
     } catch (error: any) {
       if (error?.name === "AbortError") {
@@ -278,7 +281,7 @@ export const actionLoadScene = register({
         elements,
         appState: { ...appState, errorMessage: error.message },
         files: app.files,
-        storeAction: StoreAction.NONE,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
       };
     }
   },
@@ -292,7 +295,7 @@ export const actionExportWithDarkMode = register({
   perform: (_elements, appState, value) => {
     return {
       appState: { ...appState, exportWithDarkMode: value },
-      storeAction: StoreAction.NONE,
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
   PanelComponent: ({ appState, updateData }) => (
@@ -313,129 +316,4 @@ export const actionExportWithDarkMode = register({
       />
     </div>
   ),
-});
-
-export const actionSaveToPdf = register({
-  name: "saveToPdf",
-  label: "Save to PDF",
-  icon: PdfIcon, // You'll need to import or create a PDF icon
-  trackEvent: { category: "export" },
-  predicate: (elements, appState, props, app) => {
-    return !appState.viewModeEnabled; // Ensure not in view-only mode
-  },
-  perform: async (elements, appState, value, app) => {
-    // Use the App to show the frame selector dialog
-    app.setState({
-      openDialog: {
-        name: "frameSelectorForPdf",
-      },
-    });
-
-    return {
-      storeAction: StoreAction.NONE,
-    };
-  },
-  keyTest: (event) =>
-    event.key === KEYS.P && event[KEYS.CTRL_OR_CMD] && !event.shiftKey, // Optional: Add a keyboard shortcut
-});
-
-export const actionExportToCsv = register({
-  name: "exportToCsv",
-  label: "Save to CSV",
-  icon: CsvIcon,
-  trackEvent: { category: "export" },
-  predicate: (elements, appState) => {
-    // Enable CSV export only if not in view-only mode
-    return !appState.viewModeEnabled;
-  },
-  perform: async (elements, appState, value, app) => {
-    if (value && value.selectedProperties) {
-      try {
-        console.log("[DEBUG] CSV export started with selected properties");
-        console.log("[DEBUG] Native FS supported:", nativeFileSystemSupported ? "YES" : "NO");
-        
-        // Step 1: Save data as JSON first
-        const jsonData = serializeAsJSON(
-          elements,
-          appState,
-          app.files,
-          "local",
-        );
-        const parsedData = JSON.parse(jsonData); // Parse JSON for CSV conversion
-
-        // Step 2: Generate CSV from JSON with selected properties
-        const csvBlob = await exportToCsv(
-          parsedData.elements,
-          appState,
-          app.files,
-          value.selectedProperties,
-          value.options, // Pass options including includeNullValues
-        );
-        
-        console.log("[DEBUG] CSV generated, size:", csvBlob.size, "bytes");
-        console.log("[DEBUG] About to call fileSave for CSV - watch for the file system dialog");
-
-        // Step 3: Use fileSave instead of URL and link
-        const fileName = `${app.getName()}`;
-        
-        try {
-          await fileSave(csvBlob, {
-            name: fileName,
-            extension: "csv",
-            description: "CSV Document",
-          });
-          
-          console.log("[DEBUG] CSV file save completed successfully");
-          
-          return {
-            storeAction: StoreAction.NONE,
-            appState: {
-              ...appState,
-              toast: { message: `Saved to ${fileName}.csv`, duration: 2000 },
-            },
-          };
-        } catch (saveError: any) {
-          console.error("[DEBUG] Error saving CSV file:", saveError);
-          
-          // If it's an abort error (user cancellation), just log it
-          if (saveError?.name === "AbortError") {
-            console.log("[DEBUG] CSV save operation cancelled by user");
-            return { storeAction: StoreAction.NONE };
-          }
-          
-          // Otherwise show an error message
-          return {
-            storeAction: StoreAction.NONE,
-            appState: {
-              ...appState,
-              errorMessage: `Failed to export CSV: ${
-                saveError.message || "Unknown error"
-              }`,
-            },
-          };
-        }
-      } catch (error) {
-        console.error("[DEBUG] Failed to export CSV:", error);
-        return { 
-          storeAction: StoreAction.NONE,
-          appState: {
-            ...appState,
-            errorMessage: `Failed to create CSV: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
-          },
-        };
-      }
-    } else {
-      // Show the CSV export dialog
-      return {
-        storeAction: StoreAction.NONE,
-        appState: {
-          ...appState,
-          openDialog: { name: "csvExport" },
-        },
-      };
-    }
-  },
-  keyTest: (event) => event.key === "C" && event.ctrlKey && event.shiftKey,
 });

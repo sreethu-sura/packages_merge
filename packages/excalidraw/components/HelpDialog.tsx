@@ -1,51 +1,57 @@
 import React from "react";
-import { t } from "../i18n";
-import { KEYS } from "../keys";
-import { Dialog } from "./Dialog";
-import { getShortcutKey } from "../utils";
-import "./HelpDialog.scss";
-import { ExternalLinkIcon, GithubIcon, youtubeIcon, BugIcon } from "./icons";
-import { probablySupportsClipboardBlob } from "../clipboard";
-import { isDarwin, isFirefox, isWindows } from "../constants";
+
+import { isDarwin, isFirefox, isWindows } from "@excalidraw/common";
+
+import { KEYS, getShortcutKey } from "@excalidraw/common";
+
 import { getShortcutFromShortcutName } from "../actions/shortcuts";
+import { probablySupportsClipboardBlob } from "../clipboard";
+import { t } from "../i18n";
+
+import { Dialog } from "./Dialog";
+import { ExternalLinkIcon, GithubIcon, youtubeIcon } from "./icons";
+
+import "./HelpDialog.scss";
+
+import type { JSX } from "react";
 
 const Header = () => (
   <div className="HelpDialog__header">
     <a
       className="HelpDialog__btn"
-      href="https://docs.google.com/document/d/1ojXZH2oMsDmbfo80PSjmUPx6rAaTkrsnSclfZilnp9w/edit?tab=t.0"
+      href="https://docs.excalidraw.com"
       target="_blank"
-      rel="noopener noreferrer"
+      rel="noopener"
     >
       <div className="HelpDialog__link-icon">{ExternalLinkIcon}</div>
       {t("helpDialog.documentation")}
     </a>
-    {/* <a
+    <a
       className="HelpDialog__btn"
-      href="https://www.autodesk.com/"
+      href="https://plus.excalidraw.com/blog"
       target="_blank"
-      rel="noopener noreferrer"
+      rel="noopener"
     >
       <div className="HelpDialog__link-icon">{ExternalLinkIcon}</div>
       {t("helpDialog.blog")}
-    </a> */}
+    </a>
     <a
       className="HelpDialog__btn"
-      href="https://docs.google.com/document/d/1ojXZH2oMsDmbfo80PSjmUPx6rAaTkrsnSclfZilnp9w/edit?tab=t.30fm4ks4zs81"
+      href="https://github.com/excalidraw/excalidraw/issues"
       target="_blank"
       rel="noopener noreferrer"
     >
-      <div className="HelpDialog__link-icon">{BugIcon}</div>
+      <div className="HelpDialog__link-icon">{GithubIcon}</div>
       {t("helpDialog.github")}
     </a>
     <a
       className="HelpDialog__btn"
-      href="https://drive.google.com/file/d/1Cqbm0Me06uYvu8LOy9mb9cEZd9ttV8dR/view?usp=drive_link"
+      href="https://youtube.com/@excalidraw"
       target="_blank"
       rel="noopener noreferrer"
     >
       <div className="HelpDialog__link-icon">{youtubeIcon}</div>
-      Demo Video
+      YouTube
     </a>
   </div>
 );
@@ -241,6 +247,11 @@ export const HelpDialog = ({ onClose }: { onClose?: () => void }) => {
               label={t("toolBar.link")}
               shortcuts={[getShortcutKey("CtrlOrCmd+K")]}
             />
+            <Shortcut
+              label={t("toolBar.convertElementType")}
+              shortcuts={["Tab", "Shift+Tab"]}
+              isOr={true}
+            />
           </ShortcutIsland>
           <ShortcutIsland
             className="HelpDialog__island--view"
@@ -293,10 +304,6 @@ export const HelpDialog = ({ onClose }: { onClose?: () => void }) => {
             <Shortcut
               label={t("labels.toggleTheme")}
               shortcuts={[getShortcutKey("Alt+Shift+D")]}
-            />
-            <Shortcut
-              label={t("labels.insertMode")}
-              shortcuts={[getShortcutFromShortcutName("toggleMode")]}
             />
             <Shortcut
               label={t("stats.fullTitle")}

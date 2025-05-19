@@ -5,29 +5,34 @@ import React, {
   useRef,
   useState,
 } from "react";
+
+import { MIME_TYPES, arrayToMap } from "@excalidraw/common";
+
+import { duplicateElements } from "@excalidraw/element";
+
 import { serializeLibraryAsJSON } from "../data/json";
+import { useLibraryCache } from "../hooks/useLibraryItemSvg";
+import { useScrollPosition } from "../hooks/useScrollPosition";
 import { t } from "../i18n";
-import type {
-  ExcalidrawProps,
-  LibraryItem,
-  LibraryItems,
-  UIAppState,
-} from "../types";
-import { arrayToMap } from "../utils";
-import Stack from "./Stack";
-import { MIME_TYPES } from "../constants";
-import Spinner from "./Spinner";
-import { duplicateElements } from "../element/newElement";
+
 import { LibraryMenuControlButtons } from "./LibraryMenuControlButtons";
 import { LibraryDropdownMenu } from "./LibraryMenuHeaderContent";
 import {
   LibraryMenuSection,
   LibraryMenuSectionGrid,
 } from "./LibraryMenuSection";
-import { useScrollPosition } from "../hooks/useScrollPosition";
-import { useLibraryCache } from "../hooks/useLibraryItemSvg";
+
+import Spinner from "./Spinner";
+import Stack from "./Stack";
 
 import "./LibraryMenuItems.scss";
+
+import type {
+  ExcalidrawProps,
+  LibraryItem,
+  LibraryItems,
+  UIAppState,
+} from "../types";
 
 // using an odd number of items per batch so the rendering creates an irregular
 // pattern which looks more organic
@@ -35,36 +40,6 @@ const ITEMS_RENDERED_PER_BATCH = 17;
 // when render outputs cached we can render many more items per batch to
 // speed it up
 const CACHED_ITEMS_RENDERED_PER_BATCH = 64;
-
-// Helper function to determine if an item is a rack
-const isRackItem = (item: LibraryItem) => {
-  // Check if the item has a category metadata property
-  if (item.metadata?.category === "rack") {
-    return true;
-  }
-  // Fallback to ID check (existing behavior)
-  return item.id?.toLowerCase().includes("rack") || false;
-};
-
-// Helper to check if an item belongs to a custom category
-const isCustomCategoryItem = (item: LibraryItem, categoryName: string) => {
-  return (
-    item.metadata?.category === "custom" &&
-    item.metadata?.customCategory === categoryName
-  );
-};
-
-// Helper to determine if an item has no category or an unknown category
-const isOtherItem = (item: LibraryItem) => {
-  // If there's no metadata or category, it's "Other"
-  if (!item.metadata || !item.metadata.category) {
-    return true;
-  }
-  // If the category is not one of the defined types, it's "Other"
-  return !["rack", "non-rack", "custom"].includes(item.metadata.category);
-};
-
-export type CategoryType = "rack" | "non-rack" | "custom" | "other";
 
 export default function LibraryMenuItems({
   isLoading,
@@ -82,12 +57,7 @@ export default function LibraryMenuItems({
   libraryItems: LibraryItems;
   pendingElements: LibraryItem["elements"];
   onInsertLibraryItems: (libraryItems: LibraryItems) => void;
-  onAddToLibrary: (
-    elements: LibraryItem["elements"],
-    category?: CategoryType,
-    customCategory?: string,
-    name?: string,
-  ) => void;
+  onAddToLibrary: (elements: LibraryItem["elements"]) => void;
   libraryReturnUrl: ExcalidrawProps["libraryReturnUrl"];
   theme: UIAppState["theme"];
   id: string;
@@ -96,21 +66,6 @@ export default function LibraryMenuItems({
 }) {
   const libraryContainerRef = useRef<HTMLDivElement>(null);
   const scrollPosition = useScrollPosition<HTMLDivElement>(libraryContainerRef);
-
-  // State for custom categories
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [newCategoryName, setNewCategoryName] = useState<string>("");
-  const [showCategoryInput, setShowCategoryInput] = useState<boolean>(false);
-  const [categoryError, setCategoryError] = useState<string>("");
-
-  // State for item name input
-  const [itemName, setItemName] = useState<string>("");
-
-  // State for pending item category selection
-  const [selectedCategory, setSelectedCategory] = useState<{
-    type: CategoryType;
-    name?: string;
-  }>({ type: "rack" });
 
   // This effect has to be called only on first render, therefore  `scrollPosition` isn't in the dependency array
   useEffect(() => {
@@ -125,42 +80,17 @@ export default function LibraryMenuItems({
     [libraryItems],
   );
 
-  // Split items into Racks and Non-Racks categories
-  const rackItems = useMemo(
-    () => unpublishedItems.filter((item) => isRackItem(item)),
-    [unpublishedItems],
-  );
-
-  const nonRackItems = useMemo(
-    () =>
-      unpublishedItems.filter(
-        (item) =>
-          !isRackItem(item) &&
-          !isOtherItem(item) &&
-          (!item.metadata?.category || item.metadata?.category === "non-rack"),
-      ),
-    [unpublishedItems],
-  );
-
-  // Other category items (no category specified or unknown category)
-  const otherItems = useMemo(
-    () => unpublishedItems.filter((item) => isOtherItem(item)),
-    [unpublishedItems],
-  );
-
-  // Get custom category items
-  const getCustomCategoryItems = useCallback(
-    (categoryName: string) => {
-      return unpublishedItems.filter((item) =>
-        isCustomCategoryItem(item, categoryName),
-      );
-    },
-    [unpublishedItems],
+  const publishedItems = useMemo(
+    () => libraryItems.filter((item) => item.status === "published"),
+    [libraryItems],
   );
 
   const showBtn = !libraryItems.length && !pendingElements.length;
 
-  const isLibraryEmpty = !pendingElements.length && !unpublishedItems.length;
+  const isLibraryEmpty =
+    !pendingElements.length &&
+    !unpublishedItems.length &&
+    !publishedItems.length;
 
   const [lastSelectedItem, setLastSelectedItem] = useState<
     LibraryItem["id"] | null
@@ -170,7 +100,7 @@ export default function LibraryMenuItems({
     (id: LibraryItem["id"], event: React.MouseEvent) => {
       const shouldSelect = !selectedItems.includes(id);
 
-      const orderedItems = [...unpublishedItems];
+      const orderedItems = [...unpublishedItems, ...publishedItems];
 
       if (shouldSelect) {
         if (event.shiftKey && lastSelectedItem) {
@@ -208,7 +138,13 @@ export default function LibraryMenuItems({
         onSelectItems(selectedItems.filter((_id) => _id !== id));
       }
     },
-    [lastSelectedItem, onSelectItems, selectedItems, unpublishedItems],
+    [
+      lastSelectedItem,
+      onSelectItems,
+      publishedItems,
+      selectedItems,
+      unpublishedItems,
+    ],
   );
 
   const getInsertedElements = useCallback(
@@ -226,7 +162,11 @@ export default function LibraryMenuItems({
           ...item,
           // duplicate each library item before inserting on canvas to confine
           // ids and bindings to each library item. See #6465
-          elements: duplicateElements(item.elements, { randomizeSeed: true }),
+          elements: duplicateElements({
+            type: "everything",
+            elements: item.elements,
+            randomizeSeed: true,
+          }).duplicatedElements,
         };
       });
     },
@@ -254,40 +194,9 @@ export default function LibraryMenuItems({
     [selectedItems],
   );
 
-  // Handle adding to selected category
-  const handleAddToCategory = useCallback(() => {
-    if (selectedCategory.type === "custom" && !selectedCategory.name) {
-      return; // Don't add if no custom category name is selected
-    }
-
-    if (selectedCategory.type === "rack") {
-      onAddToLibrary(pendingElements, "rack", undefined, itemName || undefined);
-    } else if (selectedCategory.type === "non-rack") {
-      onAddToLibrary(
-        pendingElements,
-        "non-rack",
-        undefined,
-        itemName || undefined,
-      );
-    } else if (selectedCategory.type === "other") {
-      onAddToLibrary(
-        pendingElements,
-        "other",
-        undefined,
-        itemName || undefined,
-      );
-    } else if (selectedCategory.type === "custom" && selectedCategory.name) {
-      onAddToLibrary(
-        pendingElements,
-        "custom",
-        selectedCategory.name,
-        itemName || undefined,
-      );
-    }
-
-    // Clear the name input after adding to library
-    setItemName("");
-  }, [pendingElements, onAddToLibrary, selectedCategory, itemName]);
+  const onAddToLibraryClick = useCallback(() => {
+    onAddToLibrary(pendingElements);
+  }, [pendingElements, onAddToLibrary]);
 
   const onItemClick = useCallback(
     (id: LibraryItem["id"] | null) => {
@@ -303,425 +212,125 @@ export default function LibraryMenuItems({
       ? CACHED_ITEMS_RENDERED_PER_BATCH
       : ITEMS_RENDERED_PER_BATCH;
 
-  const renderNoItemsMessage = () => (
-    <div className="library-menu-items__no-items">
-      <div className="library-menu-items__no-items__label">
-        {t("library.noItems")}
-      </div>
-      <div className="library-menu-items__no-items__hint">
-        {t("library.hint_emptyLibrary")}
-      </div>
-    </div>
-  );
-
-  // Handle adding a new category
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) {
-      setCategoryError("Category name cannot be empty");
-      return;
-    }
-
-    if (customCategories.includes(newCategoryName.trim())) {
-      setCategoryError("Category already exists");
-      return;
-    }
-
-    setCustomCategories([...customCategories, newCategoryName.trim()]);
-    setNewCategoryName("");
-    setShowCategoryInput(false);
-    setCategoryError("");
-  };
-
-  // Add to Library UI for pending elements
-  const renderAddToLibraryUI = () => {
-    if (!pendingElements.length) return null;
-
-    return (
-      <div className="pending-library-items">
-        <div className="library-menu-items-container__header">
-          {"Pending Elements"}
-        </div>
-        <LibraryMenuSectionGrid>
-          <LibraryMenuSection
-            itemsRenderedPerBatch={itemsRenderedPerBatch}
-            items={[{ id: null, elements: pendingElements }]}
-            onItemSelectToggle={onItemSelectToggle}
-            onItemDrag={onItemDrag}
-            onClick={() => {}} // No action on click for pending elements
-            isItemSelected={isItemSelected}
-            svgCache={svgCache}
-          />
-        </LibraryMenuSectionGrid>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            padding: "12px 0",
-            gap: "12px",
-          }}
-        >
-          {/* Name input field */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>Name:</span>
-            <input
-              type="text"
-              value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
-              placeholder={t("labels.nameYourLibraryItem")}
-              style={{
-                padding: "6px",
-                borderRadius: "4px",
-                border: "1px solid var(--color-primary)",
-                flex: 1,
-              }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>Add to:</span>
-            <select
-              value={
-                selectedCategory.type === "custom"
-                  ? `custom:${selectedCategory.name}`
-                  : selectedCategory.type
-              }
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === "rack") {
-                  setSelectedCategory({ type: "rack" });
-                } else if (value === "non-rack") {
-                  setSelectedCategory({ type: "non-rack" });
-                } else if (value === "other") {
-                  setSelectedCategory({ type: "other" });
-                } else if (value.startsWith("custom:")) {
-                  const categoryName = value.replace("custom:", "");
-                  setSelectedCategory({
-                    type: "custom",
-                    name: categoryName,
-                  });
-                }
-              }}
-              style={{
-                padding: "6px",
-                borderRadius: "4px",
-                border: "1px solid var(--color-primary)",
-                flex: 1,
-              }}
-            >
-              <option value="rack">Racks</option>
-              <option value="non-rack">Non-Racks</option>
-              <option value="other">Other</option>
-              {customCategories.map((category) => (
-                <option key={category} value={`custom:${category}`}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            className="library-menu-control-button"
-            onClick={handleAddToCategory}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "4px",
-              border: "1px solid var(--color-primary)",
-              background: "transparent",
-              cursor: "pointer",
-            }}
-          >
-            Add to Library
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  // Category management UI at the bottom
-  const renderCategoryManagement = () => {
-    return (
-      <div
-        style={{
-          marginTop: "20px",
-          borderTop: "1px solid var(--color-primary-darker)",
-          paddingTop: "16px",
-          width: "100%",
-          paddingLeft: "var(--container-padding-x)",
-          paddingRight: "var(--container-padding-x)",
-          boxSizing: "border-box",
-        }}
-      >
-        {showCategoryInput ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-              padding: "8px",
-              border: "1px solid var(--color-primary)",
-              borderRadius: "4px",
-              width: "100%",
-              boxSizing: "border-box",
-            }}
-          >
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Enter category name"
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: categoryError ? "1px solid red" : "1px solid #ccc",
-                width: "100%",
-                boxSizing: "border-box",
-              }}
-            />
-            {categoryError && (
-              <div style={{ color: "red", fontSize: "0.8em" }}>
-                {categoryError}
-              </div>
-            )}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "8px",
-                width: "100%",
-              }}
-            >
-              <button
-                onClick={handleAddCategory}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid var(--color-primary)",
-                  background: "transparent",
-                  cursor: "pointer",
-                  flex: 1,
-                }}
-              >
-                Add
-              </button>
-              <button
-                onClick={() => {
-                  setShowCategoryInput(false);
-                  setNewCategoryName("");
-                  setCategoryError("");
-                }}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  background: "transparent",
-                  cursor: "pointer",
-                  flex: 1,
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowCategoryInput(true)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "4px",
-              border: "1px solid var(--color-primary)",
-              background: "transparent",
-              cursor: "pointer",
-              width: "100%",
-              boxSizing: "border-box",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            <span>+</span> Add Category
-          </button>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div
       className="library-menu-items-container"
       style={
-        pendingElements.length || unpublishedItems.length
+        pendingElements.length ||
+        unpublishedItems.length ||
+        publishedItems.length
           ? { justifyContent: "flex-start" }
           : { borderBottom: 0 }
       }
     >
+      {!isLibraryEmpty && (
+        <LibraryDropdownMenu
+          selectedItems={selectedItems}
+          onSelectItems={onSelectItems}
+          className="library-menu-dropdown-container--in-heading"
+        />
+      )}
       <Stack.Col
         className="library-menu-items-container__items"
         align="start"
         gap={1}
         style={{
-          flex: 1,
+          flex: publishedItems.length > 0 ? 1 : "0 1 auto",
           marginBottom: 0,
-          width: "100%",
-          overflowX: "hidden",
-          overflowY: "auto",
         }}
         ref={libraryContainerRef}
       >
-        {/* Main Personal Library Heading */}
-        <div
-          className="library-menu-items-container__header"
-          style={{
-            fontSize: "1.2em",
-            fontWeight: "bold",
-            padding: "8px 0 12px 0",
-            borderBottom: "2px solid var(--color-primary)",
-            marginBottom: "8px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "100%",
-          }}
-        >
-          {"Personal Library"}
-          <LibraryDropdownMenu
-            selectedItems={selectedItems}
-            onSelectItems={onSelectItems}
-            className="library-menu-dropdown-container--in-heading"
-          />
-        </div>
-
-        {isLoading && (
-          <div
-            style={{
-              position: "absolute",
-              top: "var(--container-padding-y)",
-              right: "var(--container-padding-x)",
-              transform: "translateY(50%)",
-            }}
-          >
-            <Spinner />
-          </div>
-        )}
-
-        {renderAddToLibraryUI()}
-
-        {/* Racks Section */}
         <>
-          <div
-            className="library-menu-items-container__header"
-            style={{ width: "100%" }}
-          >
-            {"Racks"}
-          </div>
-          {!rackItems.length ? (
-            renderNoItemsMessage()
-          ) : (
-            <div style={{ width: "100%" }}>
-              <LibraryMenuSectionGrid>
-                <LibraryMenuSection
-                  itemsRenderedPerBatch={itemsRenderedPerBatch}
-                  items={rackItems}
-                  onItemSelectToggle={onItemSelectToggle}
-                  onItemDrag={onItemDrag}
-                  onClick={onItemClick}
-                  isItemSelected={isItemSelected}
-                  svgCache={svgCache}
-                />
-              </LibraryMenuSectionGrid>
+          {!isLibraryEmpty && (
+            <div className="library-menu-items-container__header">
+              {t("labels.personalLib")}
             </div>
           )}
-        </>
-
-        {/* Non-Racks Section */}
-        <>
-          <div
-            className="library-menu-items-container__header"
-            style={{ width: "100%" }}
-          >
-            {"Non-Racks"}
-          </div>
-          {!nonRackItems.length ? (
-            renderNoItemsMessage()
-          ) : (
-            <div style={{ width: "100%" }}>
-              <LibraryMenuSectionGrid>
-                <LibraryMenuSection
-                  itemsRenderedPerBatch={itemsRenderedPerBatch}
-                  items={nonRackItems}
-                  onItemSelectToggle={onItemSelectToggle}
-                  onItemDrag={onItemDrag}
-                  onClick={onItemClick}
-                  isItemSelected={isItemSelected}
-                  svgCache={svgCache}
-                />
-              </LibraryMenuSectionGrid>
+          {isLoading && (
+            <div
+              style={{
+                position: "absolute",
+                top: "var(--container-padding-y)",
+                right: "var(--container-padding-x)",
+                transform: "translateY(50%)",
+              }}
+            >
+              <Spinner />
             </div>
           )}
-        </>
-
-        {/* Other Section */}
-        <>
-          <div
-            className="library-menu-items-container__header"
-            style={{ width: "100%" }}
-          >
-            {"Other"}
-          </div>
-          {!otherItems.length ? (
-            renderNoItemsMessage()
-          ) : (
-            <div style={{ width: "100%" }}>
-              <LibraryMenuSectionGrid>
-                <LibraryMenuSection
-                  itemsRenderedPerBatch={itemsRenderedPerBatch}
-                  items={otherItems}
-                  onItemSelectToggle={onItemSelectToggle}
-                  onItemDrag={onItemDrag}
-                  onClick={onItemClick}
-                  isItemSelected={isItemSelected}
-                  svgCache={svgCache}
-                />
-              </LibraryMenuSectionGrid>
-            </div>
-          )}
-        </>
-
-        {/* Custom Category Sections */}
-        {customCategories.map((category) => {
-          const categoryItems = getCustomCategoryItems(category);
-          return (
-            <React.Fragment key={category}>
-              <div
-                className="library-menu-items-container__header"
-                style={{ width: "100%" }}
-              >
-                {category}
+          {!pendingElements.length && !unpublishedItems.length ? (
+            <div className="library-menu-items__no-items">
+              <div className="library-menu-items__no-items__label">
+                {t("library.noItems")}
               </div>
-              {!categoryItems.length ? (
-                renderNoItemsMessage()
-              ) : (
-                <div style={{ width: "100%" }}>
-                  <LibraryMenuSectionGrid>
-                    <LibraryMenuSection
-                      itemsRenderedPerBatch={itemsRenderedPerBatch}
-                      items={categoryItems}
-                      onItemSelectToggle={onItemSelectToggle}
-                      onItemDrag={onItemDrag}
-                      onClick={onItemClick}
-                      isItemSelected={isItemSelected}
-                      svgCache={svgCache}
-                    />
-                  </LibraryMenuSectionGrid>
-                </div>
+              <div className="library-menu-items__no-items__hint">
+                {publishedItems.length > 0
+                  ? t("library.hint_emptyPrivateLibrary")
+                  : t("library.hint_emptyLibrary")}
+              </div>
+            </div>
+          ) : (
+            <LibraryMenuSectionGrid>
+              {pendingElements.length > 0 && (
+                <LibraryMenuSection
+                  itemsRenderedPerBatch={itemsRenderedPerBatch}
+                  items={[{ id: null, elements: pendingElements }]}
+                  onItemSelectToggle={onItemSelectToggle}
+                  onItemDrag={onItemDrag}
+                  onClick={onAddToLibraryClick}
+                  isItemSelected={isItemSelected}
+                  svgCache={svgCache}
+                />
               )}
-            </React.Fragment>
-          );
-        })}
+              <LibraryMenuSection
+                itemsRenderedPerBatch={itemsRenderedPerBatch}
+                items={unpublishedItems}
+                onItemSelectToggle={onItemSelectToggle}
+                onItemDrag={onItemDrag}
+                onClick={onItemClick}
+                isItemSelected={isItemSelected}
+                svgCache={svgCache}
+              />
+            </LibraryMenuSectionGrid>
+          )}
+        </>
 
-        {renderCategoryManagement()}
+        <>
+          {(publishedItems.length > 0 ||
+            pendingElements.length > 0 ||
+            unpublishedItems.length > 0) && (
+            <div className="library-menu-items-container__header library-menu-items-container__header--excal">
+              {t("labels.excalidrawLib")}
+            </div>
+          )}
+          {publishedItems.length > 0 ? (
+            <LibraryMenuSectionGrid>
+              <LibraryMenuSection
+                itemsRenderedPerBatch={itemsRenderedPerBatch}
+                items={publishedItems}
+                onItemSelectToggle={onItemSelectToggle}
+                onItemDrag={onItemDrag}
+                onClick={onItemClick}
+                isItemSelected={isItemSelected}
+                svgCache={svgCache}
+              />
+            </LibraryMenuSectionGrid>
+          ) : unpublishedItems.length > 0 ? (
+            <div
+              style={{
+                margin: "1rem 0",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                fontSize: ".9rem",
+              }}
+            >
+              {t("library.noItems")}
+            </div>
+          ) : null}
+        </>
 
         {showBtn && (
           <LibraryMenuControlButtons
@@ -729,7 +338,12 @@ export default function LibraryMenuItems({
             id={id}
             libraryReturnUrl={libraryReturnUrl}
             theme={theme}
-          ></LibraryMenuControlButtons>
+          >
+            <LibraryDropdownMenu
+              selectedItems={selectedItems}
+              onSelectItems={onSelectItems}
+            />
+          </LibraryMenuControlButtons>
         )}
       </Stack.Col>
     </div>

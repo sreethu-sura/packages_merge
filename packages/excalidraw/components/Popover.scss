@@ -4,15 +4,5 @@
     z-index: 10;
     padding: 5px 0 5px;
     outline: none;
-    width: 250px;
-    height: 600px;
-
-    & > ul {
-      width: 250px;
-
-      & > li {
-        width: 250px;
-      }
-    }
   }
 }

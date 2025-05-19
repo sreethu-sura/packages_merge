@@ -145,12 +145,6 @@
     font-size: 2.25rem;
   }
 
-  .custom-logo-text {
-    margin-left: 0.75rem;
-    font-size: 2rem;
-    color: var(--color-gray-80);
-  }
-
   .welcome-screen-center__heading {
     font-size: 1.125rem;
     text-align: center;
@@ -227,16 +221,6 @@
     .welcome-screen-menu-item__icon,
     .welcome-screen-menu-item__text {
       color: var(--color-gray-100);
-    }
-
-    &--promo {
-      color: var(--color-promo) !important;
-
-      &:hover {
-        .welcome-screen-menu-item__text {
-          color: var(--color-promo) !important;
-        }
-      }
     }
   }
 

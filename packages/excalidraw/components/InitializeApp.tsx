@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 
-import { LoadingMessage } from "./LoadingMessage";
-import type { Language } from "../i18n";
+import type { Theme } from "@excalidraw/element/types";
+
 import { defaultLang, languages, setLanguage } from "../i18n";
-import type { Theme } from "../element/types";
+
+import { LoadingMessage } from "./LoadingMessage";
+
+import type { Language } from "../i18n";
 
 interface Props {
   langCode: Language["code"];
@@ -16,12 +19,13 @@ export const InitializeApp = (props: Props) => {
 
   useEffect(() => {
     const updateLang = async () => {
-      // Always use English regardless of props.langCode
-      await setLanguage(defaultLang);
+      await setLanguage(currentLang);
       setLoading(false);
     };
+    const currentLang =
+      languages.find((lang) => lang.code === props.langCode) || defaultLang;
     updateLang();
-  }, []); // Remove props.langCode dependency
+  }, [props.langCode]);
 
   return loading ? <LoadingMessage theme={props.theme} /> : props.children;
 };

@@ -30,6 +30,8 @@ export {
   actionToggleTheme,
 } from "./actionCanvas";
 
+export { actionSetEmbeddableAsActiveTool } from "./actionEmbeddable";
+
 export { actionFinalize } from "./actionFinalize";
 
 export {
@@ -38,8 +40,6 @@ export {
   actionSaveToActiveFile,
   actionSaveFileToDisk,
   actionLoadScene,
-  actionSaveToPdf,
-  actionExportToCsv
 } from "./actionExport";
 
 export { actionCopyStyles, actionPasteStyles } from "./actionStyles";
@@ -54,7 +54,6 @@ export { actionGroup, actionUngroup } from "./actionGroup";
 export { actionGoToCollaborator } from "./actionNavigate";
 
 export { actionAddToLibrary } from "./actionAddToLibrary";
-export { actionReplaceWithLibraryItem } from "./actionReplaceWithLibraryItem";
 
 export {
   actionAlignTop,
@@ -81,7 +80,6 @@ export {
 } from "./actionClipboard";
 
 export { actionToggleGridMode } from "./actionToggleGridMode";
-export { actionToggleMode } from "./actionToggleMode";
 export { actionToggleZenMode } from "./actionToggleZenMode";
 export { actionToggleObjectsSnapMode } from "./actionToggleObjectsSnapMode";
 
@@ -94,10 +92,3 @@ export { actionToggleLinearEditor } from "./actionLinearEditor";
 export { actionToggleSearchMenu } from "./actionToggleSearchMenu";
 
 export { actionToggleCropEditor } from "./actionCropEditor";
-export { actionToggleElementVisibility, actionShowAllElements } from "./actionElementVisibility";
-export { actionNumberRackElements } from "./actionNumberRackElements";
-export { actionNumberRowElements } from "./actionNumberRowElements";
-export { actionNumberRowAndRackElements } from "./actionNumberRowAndRackElements";
-export { actionSelectSimilar } from "./actionSelectSimilar";
-export { actionLockRackNumber } from "./actionLockRackNumber";
-export { actionVisibilitySettings } from "./actionVisibilitySettings";

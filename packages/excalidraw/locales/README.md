@@ -1,17 +1,3 @@
-# Excalidraw i18n
-
-NOTE: This version of Excalidraw has been modified to only support English language.
-
-All other language files have been removed to simplify the codebase and ensure a consistent user experience.
-
-### English File Structure
-
-The English language file (`en.json`) contains all the text strings used in the application.
-
-## Development
-
-The application only supports English. If you need to modify text, edit the `en.json` file directly.
-
 ## How to contribute
 
 Please do not contribute changes directly to these files, as we manage them with Crowdin. Instead:

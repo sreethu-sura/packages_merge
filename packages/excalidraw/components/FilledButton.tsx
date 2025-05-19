@@ -1,11 +1,14 @@
-import React, { forwardRef, useState } from "react";
 import clsx from "clsx";
+import React, { forwardRef, useState } from "react";
+
+import { isPromiseLike } from "@excalidraw/common";
+
+import { AbortError } from "../errors";
+
+import Spinner from "./Spinner";
+import { tablerCheckIcon } from "./icons";
 
 import "./FilledButton.scss";
-import { AbortError } from "../errors";
-import Spinner from "./Spinner";
-import { isPromiseLike } from "../utils";
-import { tablerCheckIcon } from "./icons";
 
 export type ButtonVariant = "filled" | "outlined" | "icon";
 export type ButtonColor =
@@ -30,10 +33,6 @@ export type FilledButtonProps = {
   fullWidth?: boolean;
 
   icon?: React.ReactNode;
-
-  "aria-disabled"?: boolean;
-  "aria-label"?: string;
-  "aria-labelledby"?: string;
 };
 
 export const FilledButton = forwardRef<HTMLButtonElement, FilledButtonProps>(
